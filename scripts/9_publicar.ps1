@@ -42,6 +42,12 @@ if (Test-Path "$Entrega\$(Nome-Arquivo 'client' 'install' 'x86')") {
 } else {
   Write-Warning "Sem o Cliente x86 ($(Nome-Arquivo 'client' 'install' 'x86')): a release sai so com o x64"
 }
+# MSI do Cliente (6_msi_cliente.ps1), quando gerado: vai na pasta da versao e no versao.json (<nome>-msi), com o SHA-256
+if (Test-Path "$Entrega\$(Nome-Arquivo 'client' 'msi')") {
+  $Arquivos["$($Cliente.ToLower())-msi"] = (Nome-Arquivo 'client' 'msi')
+} else {
+  Write-Warning "Sem o MSI do Cliente ($(Nome-Arquivo 'client' 'msi'))"
+}
 foreach ($a in @($Arquivos.Values) + $Portateis) {
   Copy-Item -Force "$Entrega\$a" "$Pasta\$a"
 }

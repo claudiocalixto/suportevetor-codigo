@@ -12,4 +12,8 @@ foreach ($perfil in 'console', 'cliente') {
   & "$PSScriptRoot\6_empacotar.ps1"
 }
 $env:CADENA_PERFIL = $null
+# MSI do Cliente (2026-11-23: o provedor dos instaladores nao aceita .exe). A pasta Release ainda e a do Cliente,
+# compilado por ultimo no laco acima
+"##### MSI do Cliente"
+& "$PSScriptRoot\6_msi_cliente.ps1"
 "##### Concluido"

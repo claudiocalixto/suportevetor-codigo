@@ -1,5 +1,33 @@
 # Mudanças
 
+## 1.1.2 (número interno 17)
+
+Junta tudo o que está na 1.1.1 abaixo e acrescenta o MSI do Cliente.
+
+### Cliente também em MSI
+
+O provedor onde ficam os instaladores para o ERP baixar não aceita `.exe`. Por isso, o Cliente também sai como **`suporte-vX.Y.Z-client-x64.msi`**.
+
+- **Script novo `scripts/6_msi_cliente.ps1`**, chamado pelo `8_compilar_perfis.ps1` logo depois do Cliente. Ele usa o projeto WiX v4 do próprio RustDesk (`res/msi`) sobre a pasta compilada do Cliente:
+  1. copia a pasta `Release` para `<Raiz>\msi-cliente`, renomeia `rustdesk.exe` para o nome interno (`SuporteVetorSistemas.exe`) e inclui o certificado **público** da marca (`cadena-editor.cer`);
+  2. roda o `preprocess.py` com `--app-name`, `-v <versão>`, `-m <empresa>`, `-c` e `--conn-type incoming`;
+  3. aplica as mudanças da Vetor no projeto:
+     - **sem o assistente nem o acordo de licença** do RustDesk, que é em inglês: tira o `ui:WixUI` e a `InstallUISequence`. A instalação mostra só o progresso e o pedido de administrador;
+     - **certificado da marca como confiável:** as ações `CadenaCertificadoRoot` e `CadenaCertificadoEditor` rodam `certutil -addstore` em Root e TrustedPublisher, como sistema, logo depois de `InstallFiles`. Falha não interrompe a instalação. É o mesmo que o `install_me` do `.exe` faz;
+     - os links de "Adicionar/Remover programas" apontam para o código-fonte (oferta da AGPL);
+  4. `nuget restore` e `msbuild` (o NuGet é baixado para `<Raiz>\ferramentas\nuget`, e o WiX vem pelo NuGet), assina o `.msi` e devolve o `res/msi` ao original (`git checkout` + `git clean`).
+- **O que já vem do projeto do RustDesk:**
+  - serviço do Windows criado e iniciado;
+  - regras de firewall;
+  - atalhos no Menu Iniciar e na Área de Trabalho, mais o da bandeja na inicialização;
+  - **nenhuma impressora**: ela só é instalada com `PRINTER=1`.
+- **`9_publicar.ps1`:** põe o MSI na pasta da versão e no `versao.json`, na chave `<nome>-msi`, com o SHA-256. O `configuracao.ps1` ganhou o tipo `msi` no `Nome-Arquivo`.
+- **Instalação pelo ERP, sem tela:** `msiexec /i suporte-vX.Y.Z-client-x64.msi /qn`. Só aparece o pedido de administrador do Windows.
+- **Limitações:**
+  - o MSI **se recusa a instalar** onde o Cliente foi instalado pelo `.exe` (`BlockSelfInstalledApp` do RustDesk). Nessas máquinas, desinstale o Cliente uma vez antes;
+  - em "Adicionar/Remover programas" e nos atalhos, o nome aparece sem espaços (`SuporteVetorSistemas`), porque o projeto usa o nome interno;
+  - o Console Técnico continua só em `.exe`. O MSI do RustDesk ainda não trata programas "só acessa".
+
 ## 1.1.1 (em teste, número interno 16)
 
 ### Técnico e Console Técnico: acesso só pelo ID que o cliente informa

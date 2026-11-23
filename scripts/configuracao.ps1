@@ -122,6 +122,7 @@ function Nome-Arquivo([string]$Perfil, [string]$Tipo = 'install', [string]$Arq =
   switch ($Tipo) {
     'install' { return "$base-$Arq.exe" }
     'portable' { return "$base-$Arq-portable.exe" }
+    'msi' { return "$base-$Arq.msi" }
     default { return "$base-$Tipo.apk" }
   }
 }

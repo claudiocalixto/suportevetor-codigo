@@ -53,6 +53,7 @@ scripts/                compilacao do app (Windows e Android)
   3_dependencias.ps1    bibliotecas C (vcpkg) e geradores da ponte Flutter/Rust
   4_compilar.ps1        compila (build.py --flutter)
   6_empacotar.ps1       instalador unico + pacote de fonte da AGPL (patches)
+  6_msi_cliente.ps1     MSI do Cliente (projeto WiX do RustDesk, sem assistente, com o certificado da marca)
   8_compilar_perfis.ps1 Tecnico e Cliente
   9_publicar.ps1        monta a pasta da versao (exe + versao.json/versao.assinado); so publica com -Publicar
   gerar_chave_atualizacao.ps1  par de chaves Ed25519 que assina o versao.json (guardado fora do repositorio)
@@ -113,6 +114,7 @@ As releases seguem o [SemVer](https://semver.org/lang/pt-BR/). A tag é `vX.Y.Z`
 |---|---|
 | `suporte-vX.Y.Z-client-x64.exe` | Cliente para Windows 64 bits: instalador (abre a tela de instalação) |
 | `suporte-vX.Y.Z-client-x64-portable.exe` | Cliente 64 bits portátil, sem instalar |
+| `suporte-vX.Y.Z-client-x64.msi` | Cliente para Windows 64 bits em MSI, para onde `.exe` não é aceito. Sem assistente: `msiexec /i … /qn` instala sem tela. Não instala por cima de um Cliente instalado pelo `.exe` |
 | `suporte-vX.Y.Z-client-x86.exe` | Cliente para Windows 32 bits (também roda no de 64): instalador |
 | `suporte-vX.Y.Z-client-x86-portable.exe` | Cliente 32 bits portátil |
 | `suporte-vX.Y.Z-console-x64.exe` | Console Técnico (quem atende, acessos em abas): instalador |
