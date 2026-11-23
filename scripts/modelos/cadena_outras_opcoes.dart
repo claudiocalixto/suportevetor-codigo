@@ -5,11 +5,9 @@
   Widget other() {
     final incomingOnly = bind.isIncomingOnly();
     final outgoingOnly = bind.isOutgoingOnly();
-    final showAutoUpdate = (isWindows && bind.mainIsInstalled()) ||
-        (isMacOS &&
-            bind.mainIsInstalled() &&
-            bind.mainIsInstalledDaemon(prompt: false) &&
-            !bind.isCustomClient());
+    // Vetor, 2026-11-23: atualizacao manual (o instalador novo e entregue por fora). Os programas nao procuram
+    // versao nova, entao a opcao "Auto update" sai das Configuracoes
+    const showAutoUpdate = false;
 
     final interface = <Widget>[
       if (!isWeb && !incomingOnly)

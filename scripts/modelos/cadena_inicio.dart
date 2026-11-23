@@ -22,6 +22,11 @@ import 'package:get/get.dart';
 import '../../common.dart';
 import '../../models/platform_model.dart';
 
+/// Vetor, 2026-11-23: o tecnico nao escolhe computador numa lista. O cliente chama o suporte e informa o ID, e o
+/// tecnico so digita esse ID. Com true, saem as secoes Clientes, Recentes e Favoritos, a busca, a ordenacao e a
+/// troca cartoes/lista; a area central mostra a orientacao (CadenaSoId). false volta ao visual com a lista.
+const cadenaSoPorId = true;
+
 Color _suave(BuildContext context) =>
     Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.75) ??
     Colors.grey;
@@ -76,11 +81,13 @@ class _CadenaLateralState extends State<CadenaLateral> {
   final _versao = ''.obs;
   Timer? _timer;
 
-  static const _secoes = [
-    (PeerTabIndex.group, 'Clientes', Icons.desktop_windows_outlined),
-    (PeerTabIndex.recent, 'Recentes', Icons.history),
-    (PeerTabIndex.fav, 'Favoritos', Icons.star_outline),
-  ];
+  static const _secoes = cadenaSoPorId
+      ? <(PeerTabIndex, String, IconData)>[]
+      : [
+          (PeerTabIndex.group, 'Clientes', Icons.desktop_windows_outlined),
+          (PeerTabIndex.recent, 'Recentes', Icons.history),
+          (PeerTabIndex.fav, 'Favoritos', Icons.star_outline),
+        ];
 
   @override
   void initState() {
@@ -685,9 +692,11 @@ class _CadenaTopoState extends State<CadenaTopo> {
       // Janela estreita: o campo de ID sempre fica; a busca sai antes, depois ordenar e atualizar
       child: LayoutBuilder(builder: (context, limites) {
         final largura = limites.maxWidth;
-        final comBusca = largura >= 820;
-        final comExtras = largura >= 600;
-        return Obx(() => Row(
+        // Sem lista (cadenaSoPorId): busca, ordenar, cartoes/lista e atualizar nao tem o que mostrar
+        final comBusca = !cadenaSoPorId && largura >= 820;
+        final comExtras = !cadenaSoPorId && largura >= 600;
+        final comVisao = !cadenaSoPorId;
+        Widget linha() => Row(
             children: [
               Expanded(
                 flex: 5,
@@ -713,11 +722,13 @@ class _CadenaTopoState extends State<CadenaTopo> {
                       : 'Por nome (clique para online primeiro)',
                   ativo: peerSort.value == PeerSortType.status,
                   onTap: _mudarOrdem),
+              if (comVisao)
               _botaoIcone(context,
                   icone: Icons.grid_view_rounded,
                   dica: 'Cartões',
                   ativo: peerCardUiType.value == PeerUiType.grid,
                   onTap: () => _mudarVisao(PeerUiType.grid)),
+              if (comVisao)
               _botaoIcone(context,
                   icone: Icons.view_list_rounded,
                   dica: 'Lista',
@@ -735,7 +746,9 @@ class _CadenaTopoState extends State<CadenaTopo> {
                 child: CadenaSeletorEstilo(tamanho: 20),
               ),
             ],
-          ));
+          );
+        // O Obx so faz sentido com os botoes que leem peerSort/peerCardUiType; sem eles o GetX recusa um Obx vazio
+        return cadenaSoPorId ? linha() : Obx(linha);
       }),
     );
   }
@@ -812,6 +825,69 @@ class _CadenaRodapeState extends State<CadenaRodape> {
   }
 }
 
+/// Area central do Tecnico sem lista de computadores (cadenaSoPorId): o acesso sempre parte do cliente, que chama
+/// o suporte e informa o ID. So orienta; o campo do ID e o Conectar ficam na barra de cima (CadenaTopo)
+class CadenaSoId extends StatelessWidget {
+  const CadenaSoId({Key? key}) : super(key: key);
+
+  Widget _passo(BuildContext context, int n, String texto) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 26,
+            height: 26,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: MyTheme.accent.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Text('$n',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: MyTheme.accent)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(texto, style: const TextStyle(fontSize: 14, height: 1.4))
+                .paddingOnly(top: 3),
+          ),
+        ],
+      ).paddingOnly(bottom: 12);
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.support_agent_outlined,
+                  size: 44, color: MyTheme.accent),
+              const SizedBox(height: 14),
+              const Text('Acesso a pedido do cliente',
+                  style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700)),
+              Text('O acesso sempre começa pelo cliente. Não há lista de computadores para escolher.',
+                      style: TextStyle(fontSize: 13.5, color: _suave(context)))
+                  .paddingOnly(top: 4, bottom: 20),
+              _passo(context, 1,
+                  'O cliente abre o Suporte Vetor Sistemas e chama o suporte.'),
+              _passo(context, 2,
+                  'Ele informa o ID de 9 dígitos que aparece na tela dele.'),
+              _passo(context, 3,
+                  'Digite o ID no campo acima e clique em Conectar. O cliente aceita o acesso na tela dele.'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Titulo da secao atual, acima da lista de computadores
 class CadenaTituloSecao extends StatelessWidget {
   const CadenaTituloSecao({Key? key}) : super(key: key);
@@ -825,6 +901,7 @@ class CadenaTituloSecao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (cadenaSoPorId) return const SizedBox.shrink();
     _CadenaEstado.iniciar();
     return Align(
       alignment: Alignment.centerLeft,

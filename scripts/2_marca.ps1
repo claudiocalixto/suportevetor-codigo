@@ -704,161 +704,16 @@ Trocar "$Fonte\flutter\lib\desktop\pages\desktop_home_page.dart" @{
   '  var svcStopped = false\.obs;' = "  var svcStopped = false.obs;`n  // CadenaTech: o Cliente liga o servico sozinho ao abrir (uma tentativa por abertura)`n  bool _cadenaServicoTentado = false;"
   '      final v = await mainGetBoolOption\(kOptionStopService\);\r?\n      if \(v != svcStopped\.value\) \{\r?\n        svcStopped\.value = v;\r?\n        setState\(\(\) \{\}\);\r?\n      \}' = "      final v = await mainGetBoolOption(kOptionStopService);`n      if (v != svcStopped.value) {`n        svcStopped.value = v;`n        setState(() {});`n      }`n      if (v && !_cadenaServicoTentado && !bind.isOutgoingOnly()) {`n        _cadenaServicoTentado = true;`n        await start_service(true);`n      }"
 }
-# Atualizacao automatica (Windows instalado). A ultima release de github.com/$RepoAtualizacao traz versao.assinado:
-# base64 de assinatura Ed25519 + versao.json, assinado pelo 9_publicar.ps1 com a chave privada (ChavePrivada). O
-# servico confere a assinatura com a chave publica embutida, compara o numero com o desta compilacao (numero.txt
-# da pasta de entrega), confere o SHA-256 do instalador e reinstala pelo --update. O Cliente atualiza calado pelo
-# servico; o Tecnico (sem servico) pergunta na tela e pede a permissao do Windows
-if (-not $RepoAtualizacao -or -not $ChaveAtualizacao) { throw 'Informe RepoAtualizacao e ChavePublica no config.local.psd1 (atualizacao automatica)' }
+# Atualizacao MANUAL desde 2026-11-23: o instalador novo e entregue por fora, e nada mais vai para o GitHub. Os
+# programas da marca (Cliente e Console) nao procuram versao nova: o check_update, chamado pelo laco do servico do
+# Cliente e pelo botao do RustDesk, volta sem fazer nada no cliente customizado. A verificacao original do RustDesk
+# (api.rustdesk.com) o proprio RustDesk ja desliga no cliente customizado (check_software_update e
+# check_update_as_root). Para atualizar uma maquina, rode o instalador novo por cima.
+# O CADENA_NUMERO continua: e o numero interno desta compilacao (numero.txt da entrega), conferido pelo 9_publicar.ps1
 if (-not (Test-Path $ArqNumero)) { New-Item -ItemType Directory -Force (Split-Path $ArqNumero) | Out-Null; Set-Content -Encoding ascii $ArqNumero 1 }
 $NumeroVersao = [int](Get-Content $ArqNumero -Raw).Trim()
-$Atualizador = @"
-// CadenaTech: atualizacao propria, publicada em github.com/$RepoAtualizacao. Gerado pelo 2_marca.ps1
-#[cfg(target_os = "windows")]
-const CADENA_REPO: &str = "$RepoAtualizacao";
-#[cfg(target_os = "windows")]
-const CADENA_CHAVE: &str = "$ChaveAtualizacao";
-#[cfg(target_os = "windows")]
-pub const CADENA_NUMERO: u64 = $NumeroVersao;
-
-#[cfg(target_os = "windows")]
-fn cadena_atualizar() -> ResultType<()> {
-    use hbb_common::sha2::{Digest, Sha256};
-    use hbb_common::sodiumoxide::crypto::sign;
-    let base = format!("https://github.com/{}/releases", CADENA_REPO);
-    let client = crate::hbbs_http::create_http_client_with_url_strict(&format!("{}/latest", base))?;
-    let baixar = |url: String| -> ResultType<Vec<u8>> {
-        let resposta = client.get(&url).send()?;
-        if !resposta.status().is_success() {
-            bail!("Falha ao baixar {}: {}", url, resposta.status());
-        }
-        Ok(resposta.bytes()?.to_vec())
-    };
-    let assinado = baixar(format!("{}/latest/download/versao.assinado", base))?;
-    let Some(chave) = crate::decode64(CADENA_CHAVE)
-        .ok()
-        .and_then(|c| sign::PublicKey::from_slice(&c))
-    else {
-        bail!("Chave de atualizacao invalida");
-    };
-    let Ok(assinado) = crate::decode64(String::from_utf8_lossy(&assinado).trim()) else {
-        bail!("versao.assinado ilegivel");
-    };
-    let Ok(json) = sign::verify(&assinado, &chave) else {
-        bail!("Assinatura da atualizacao nao confere");
-    };
-    let dados: serde_json::Value = serde_json::from_slice(&json)?;
-    let numero = dados["numero"].as_u64().unwrap_or(0);
-    if numero <= CADENA_NUMERO {
-        log::info!("CadenaTech: versao {} instalada, {} publicada", CADENA_NUMERO, numero);
-        return Ok(());
-    }
-    // A chave e o nome interno do app em minusculas (ex.: cadenasuporte / cadenatecnico). Versoes antigas, com
-    // outro nome (cliente / tecnico), nao acham a sua chave e ficam como estao, sem instalar um segundo programa
-    let mut perfil = crate::get_app_name().to_lowercase();
-    // O Cliente de 32 bits (x86) tem a sua entrada (<nome>-x86), para nao baixar o instalador de 64 bits
-    if cfg!(target_arch = "x86") {
-        perfil.push_str("-x86");
-    }
-    let perfil = perfil.as_str();
-    let (Some(tag), Some(arquivo), Some(sha256)) = (
-        dados["tag"].as_str(),
-        dados[perfil]["arquivo"].as_str(),
-        dados[perfil]["sha256"].as_str(),
-    ) else {
-        bail!("versao.json sem os dados do perfil {}", perfil);
-    };
-    // So letras, numeros, ponto, hifen e sublinhado: nada de caminho nem de ".."
-    let nome_simples = |s: &str| {
-        !s.is_empty()
-            && !s.contains("..")
-            && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_')
-    };
-    if !nome_simples(tag)
-        || !nome_simples(arquivo)
-        || !arquivo.to_lowercase().ends_with(".exe")
-    {
-        bail!("Nome invalido na atualizacao: {} {}", tag, arquivo);
-    }
-    log::info!("CadenaTech: baixando a versao {} ({})", numero, arquivo);
-    let instalador = baixar(format!("{}/download/{}/{}", base, tag, arquivo))?;
-    let calculado = format!("{:x}", Sha256::digest(&instalador));
-    if !calculado.eq_ignore_ascii_case(sha256) {
-        bail!("SHA-256 do instalador nao confere: {}", calculado);
-    }
-    // Pasta nova e de nome imprevisivel, para ninguem trocar o arquivo entre a gravacao e a execucao
-    let pasta = std::env::temp_dir().join(format!(
-        "cadena-atualizacao-{:016x}",
-        hbb_common::rand::random::<u64>()
-    ));
-    std::fs::create_dir(&pasta)?;
-    let caminho = pasta.join(arquivo);
-    std::fs::write(&caminho, &instalador)?;
-    if !has_no_active_conns() {
-        log::info!("CadenaTech: versao {} adiada, ha sessao aberta", numero);
-    } else if crate::is_server() {
-        // Cliente (servico do Windows, como SYSTEM): o update_new_version copia o instalador para uma pasta
-        // protegida, confere o SHA-256 de novo e roda o --update, sem perguntar nada
-        update_new_version(false, &numero.to_string(), &caminho, sha256);
-    } else if cadena_perguntar_atualizar() {
-        // Tecnico: instalado sem servico, roda como o usuario. Usa o mesmo caminho do botao Atualizar do RustDesk,
-        // que confere o SHA-256 e pede a permissao do Windows (UAC) para o --update
-        if let Err(e) = crate::platform::update_to_verified(
-            &caminho.to_string_lossy(),
-            sha256,
-            instalador.len() as u64,
-        ) {
-            log::error!("CadenaTech: falha ao atualizar para a versao {}: {}", numero, e);
-        }
-    } else {
-        log::info!("CadenaTech: versao {} recusada pelo usuario, pergunta de novo mais tarde", numero);
-    }
-    std::fs::remove_dir_all(&pasta).ok();
-    Ok(())
-}
-
-// Tecnico: avisa antes de pedir a permissao do Windows, para o UAC nao aparecer do nada
-#[cfg(target_os = "windows")]
-fn cadena_perguntar_atualizar() -> bool {
-    use winapi::um::winuser::{
-        MessageBoxW, IDYES, MB_ICONQUESTION, MB_SETFOREGROUND, MB_TOPMOST, MB_YESNO,
-    };
-    let nome = crate::common::cadena_nome_exibido();
-    let texto = format!(
-        "Há uma versão nova do {}.\n\nAtualizar agora? O programa fecha e abre de novo sozinho, e o Windows pede permissão para instalar.",
-        nome
-    );
-    let largo = |s: &str| s.encode_utf16().chain(Some(0)).collect::<Vec<u16>>();
-    let (texto, titulo) = (largo(&texto), largo(&nome));
-    unsafe {
-        MessageBoxW(
-            std::ptr::null_mut(),
-            texto.as_ptr(),
-            titulo.as_ptr(),
-            MB_YESNO | MB_ICONQUESTION | MB_TOPMOST | MB_SETFOREGROUND,
-        ) == IDYES
-    }
-}
-// CadenaTech: fim da atualizacao propria
-
-fn check_update(manually: bool) -> ResultType<()> {
-"@
-$Atualizador = $Atualizador -replace "`r`n", "`n"
-Trocar "$Fonte\src\updater.rs" @{ 'fn check_update\(manually: bool\) -> ResultType<\(\)> \{' = $Atualizador }
 Trocar "$Fonte\src\updater.rs" @{
-  'fn check_update\(manually: bool\) -> ResultType<\(\)> \{' = "fn check_update(manually: bool) -> ResultType<()> {`n    // CadenaTech: cliente customizado nao usa o GitHub do RustDesk, e sim as versoes publicadas em CADENA_REPO`n    #[cfg(target_os = `"windows`")]`n    if crate::is_custom_client() {`n        if !(manually || config::Config::get_bool_option(keys::OPTION_ALLOW_AUTO_UPDATE)) {`n            return Ok(());`n        }`n        return cadena_atualizar();`n    }"
-}
-# O Tecnico (so acessa) parava antes de ligar a verificacao de atualizacao. Ele e instalado sem servico do Windows
-# (get_create_service pula o outgoing-only), entao nao existe processo --server: o start_all roda dentro da propria
-# janela. Por isso a condicao e "rodando do exe instalado", e nao is_server() (que nunca era verdade no Tecnico)
-Trocar "$Fonte\src\rendezvous_mediator.rs" @{
-  'crate::test_nat_type\(\);\r?\n        if config::is_outgoing_only\(\) \{' = "crate::test_nat_type();`n        // CadenaTech: o Tecnico tambem se atualiza quando instalado (pergunta antes, ver cadena_perguntar_atualizar)`n        #[cfg(target_os = `"windows`")]`n        if config::is_outgoing_only() && crate::platform::is_cur_exe_the_installed() {`n            crate::updater::start_auto_update();`n        }`n        if config::is_outgoing_only() {"
-}
-# Verifica a cada 3 horas (o padrao do RustDesk e 1 vez por dia), para a versao nova chegar no mesmo dia
-Trocar "$Fonte\src\updater.rs" @{
-  'pub const DUR_ONE_DAY: Duration = Duration::from_secs\(60 \* 60 \* 24\);' = "pub const DUR_ONE_DAY: Duration = Duration::from_secs(60 * 60 * 24);`n`n/// CadenaTech: intervalo entre as verificacoes da atualizacao propria (3 horas).`npub const CADENA_INTERVALO: Duration = Duration::from_secs(60 * 60 * 3);"
-  # as duas linhas do laco (a do "let mut" e a que volta ao normal depois de uma verificacao)
-  'check_interval = DUR_ONE_DAY;' = 'check_interval = CADENA_INTERVALO;'
+  'fn check_update\(manually: bool\) -> ResultType<\(\)> \{' = "// CadenaTech: numero interno desta compilacao (numero.txt da entrega). Gerado pelo 2_marca.ps1`n#[allow(dead_code)]`npub const CADENA_NUMERO: u64 = $NumeroVersao;`n`nfn check_update(manually: bool) -> ResultType<()> {`n    // Vetor: atualizacao manual. O cliente customizado nao procura versao nova (nem no GitHub nem no RustDesk)`n    if crate::is_custom_client() {`n        return Ok(());`n    }"
 }
 # Android: sem backup automatico do Google, reinstalar volta o app ao estado inicial, inclusive o aviso de golpe
 Trocar "$Fonte\flutter\android\app\src\main\AndroidManifest.xml" @{
@@ -1087,7 +942,7 @@ Trocar "$Fonte\flutter\lib\desktop\pages\desktop_home_page.dart" @{
 }
 Trocar "$Fonte\flutter\lib\desktop\pages\connection_page.dart" @{
   "import '../../common/widgets/peer_tab_page.dart';" = "import '../../common/widgets/peer_tab_page.dart';`nimport 'cadena_inicio.dart';"
-  'Row\(\r?\n              children: \[\r?\n                Flexible\(child: _buildRemoteIDTextField\(context\)\),\r?\n              \],\r?\n            \)\.marginOnly\(top: 22\),\r?\n            SizedBox\(height: 12\),\r?\n            Divider\(\)\.paddingOnly\(right: 12\),\r?\n            Expanded\(child: PeerTabPage\(\)\),\r?\n          \],\r?\n        \)\.paddingOnly\(left: 12\.0\)\),' = "// CadenaTech: no Tecnico, barra de cima e titulo da secao (cadena_inicio.dart)`n            if (isOutgoingOnly)`n              CadenaTopo(controlador: _idController, conectar: onConnect),`n            if (isOutgoingOnly) const CadenaTituloSecao().paddingOnly(left: 18),`n            if (!isOutgoingOnly)`n              Row(`n                children: [`n                  Flexible(child: _buildRemoteIDTextField(context)),`n                ],`n              ).marginOnly(top: 22),`n            if (!isOutgoingOnly) SizedBox(height: 12),`n            if (!isOutgoingOnly) Divider().paddingOnly(right: 12),`n            Expanded(`n                child: PeerTabPage().paddingOnly(`n                    left: isOutgoingOnly ? 18 : 0,`n                    right: isOutgoingOnly ? 6 : 0)),`n          ],`n        ).paddingOnly(left: isOutgoingOnly ? 0 : 12.0)),"
+  'Row\(\r?\n              children: \[\r?\n                Flexible\(child: _buildRemoteIDTextField\(context\)\),\r?\n              \],\r?\n            \)\.marginOnly\(top: 22\),\r?\n            SizedBox\(height: 12\),\r?\n            Divider\(\)\.paddingOnly\(right: 12\),\r?\n            Expanded\(child: PeerTabPage\(\)\),\r?\n          \],\r?\n        \)\.paddingOnly\(left: 12\.0\)\),' = "// CadenaTech: no Tecnico, barra de cima e titulo da secao (cadena_inicio.dart)`n            if (isOutgoingOnly)`n              CadenaTopo(controlador: _idController, conectar: onConnect),`n            if (isOutgoingOnly) const CadenaTituloSecao().paddingOnly(left: 18),`n            if (!isOutgoingOnly)`n              Row(`n                children: [`n                  Flexible(child: _buildRemoteIDTextField(context)),`n                ],`n              ).marginOnly(top: 22),`n            if (!isOutgoingOnly) SizedBox(height: 12),`n            if (!isOutgoingOnly) Divider().paddingOnly(right: 12),`n            // CadenaTech: cadenaSoPorId (cadena_inicio.dart) = sem lista de computadores, so o ID que o cliente informa`n            Expanded(`n                child: isOutgoingOnly && cadenaSoPorId`n                    ? const CadenaSoId()`n                    : PeerTabPage().paddingOnly(`n                        left: isOutgoingOnly ? 18 : 0,`n                        right: isOutgoingOnly ? 6 : 0)),`n          ],`n        ).paddingOnly(left: isOutgoingOnly ? 0 : 12.0)),"
 }
 # "Pronto" com os servidores que respondem: "Pronto · Principal, Reserva". Nenhum respondendo: "Sem conexão com o
 # servidor" e a bolinha vermelha. Antes do primeiro teste (null), fica o "Pronto" normal (Windows e Android)

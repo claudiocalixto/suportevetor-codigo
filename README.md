@@ -13,7 +13,9 @@ O repositório **não traz uma cópia do RustDesk**. Os scripts baixam o código
 **Dois programas para Windows e Android**, gerados do mesmo código:
 
 - **Cadena Suporte** (Cliente), instalado no computador atendido. Só recebe acesso. Cada conexão abre uma janela de aprovação com um aviso contra golpes; o Android mostra o mesmo aviso.
-- **Cadena Técnico**, para quem atende. Só acessa e exige login na conta da API. A tela inicial tem uma lateral com Clientes, Recentes e Favoritos, a conta e o status dos servidores, e cartões por computador (sistema, online, favorito, Conectar); em janela estreita a lateral fica só com os ícones. Clientes lista os computadores dos clientes, separados por empresa, com o apelido e a observação definidos no painel. Cada acesso é gravado, e as gravações podem ir sozinhas para um servidor FTP (Configurações > Geral, com endereço para a rede local e para fora).
+- **Cadena Técnico** (e o Console Técnico, com os acessos em abas), para quem atende. Só acessa e exige login na conta da API. **O acesso sempre parte do cliente:** ele chama o suporte e informa o ID, e o técnico digita esse ID na barra de cima e clica em Conectar. Não há lista de computadores para escolher: a lateral tem só Configurações, a conta e o status dos servidores, e a área central mostra a orientação. Cada acesso é gravado, e as gravações podem ir sozinhas para um servidor FTP (Configurações > Geral, com endereço para a rede local e para fora).
+
+  O visual antigo, com as seções Clientes (por empresa), Recentes e Favoritos, a busca e os cartões, continua no código. Para voltar a ele, troque `cadenaSoPorId` para `false` em [`scripts/modelos/cadena_inicio.dart`](scripts/modelos/cadena_inicio.dart).
 
 **Servidor próprio, com reserva automática.** O servidor e a chave vão embutidos e travados no programa. Um segundo servidor é opcional:
 
@@ -21,7 +23,7 @@ O repositório **não traz uma cópia do RustDesk**. Os scripts baixam o código
 - o Técnico procura o ID no segundo quando o primeiro não responde;
 - a tela mostra `Pronto · Principal, Reserva` com os servidores que respondem, ou `Sem conexão com o servidor` com a bolinha vermelha.
 
-**Atualização automática no Windows.** Cada release no GitHub é assinada com Ed25519. O programa instalado confere a assinatura e o SHA-256 do instalador antes de se atualizar, e só faz isso quando não há acesso em andamento.
+**Atualização manual.** Os programas não procuram versão nova, nem no GitHub nem no RustDesk, e não há a opção "Auto update" nas Configurações. Para atualizar um computador, rode o instalador novo por cima. As versões até a 1.1.0 ainda tinham a atualização automática pelas releases do GitHub; elas deixam de procurar quando recebem uma versão nova.
 
 **API e painel web**, a partir do [rustdesk-api-server-pro](https://github.com/lantongxue/rustdesk-api-server-pro) com recursos a mais:
 
@@ -48,8 +50,8 @@ scripts/                compilacao do app (Windows e Android)
   4_compilar.ps1        compila (build.py --flutter)
   6_empacotar.ps1       instalador unico + pacote de fonte da AGPL (patches)
   8_compilar_perfis.ps1 Tecnico e Cliente
-  9_publicar.ps1        release com versao.assinado (atualizacao automatica)
-  gerar_chave_atualizacao.ps1  par de chaves Ed25519 da atualizacao (guardado fora do repositorio)
+  9_publicar.ps1        monta a pasta da versao (exe + versao.json/versao.assinado); so publica com -Publicar
+  gerar_chave_atualizacao.ps1  par de chaves Ed25519 que assina o versao.json (guardado fora do repositorio)
   modelos/              modulo de FTP (Rust), tela do FTP e tela inicial do Tecnico (Dart)
   android/              compilacao do Android num WSL (Ubuntu) dedicado
 api/                    API e painel: cadena-api.patch, pt-br.ts, atualizar_api.ps1, exemplos de configuracao
@@ -66,7 +68,7 @@ Nada de segredo ou de endereço de servidor fica no repositório. Copie `config.
 | `Raiz`, `Entrega` | pasta das ferramentas e do código do RustDesk; pasta dos instaladores gerados |
 | `Servidor1`, `Servidor2` | endereço do hbbs, chave pública (`id_ed25519.pub`) e o nome mostrado na tela |
 | `Api` | endereço HTTPS da API |
-| `RepoAtualizacao`, `ChavePublica`, `ChavePrivada` | releases da atualização automática e o par de chaves Ed25519 |
+| `RepoAtualizacao`, `ChavePublica`, `ChavePrivada` | repositório das releases (só para `-Publicar`) e o par de chaves Ed25519 que assina o `versao.json` |
 | `AndroidChave`, `AndroidSenhas` | keystore do Android (criada na primeira compilação, se não existir) |
 
 Também dá para usar variáveis de ambiente, úteis num CI: `CADENA_SERVIDOR1`, `CADENA_CHAVE1`, `CADENA_SERVIDOR2`, `CADENA_CHAVE2`, `CADENA_API`, `CADENA_REPO_ATUALIZACAO`, `CADENA_CHAVE_ATUALIZACAO`, `CADENA_MARCA` e as demais listadas em [`scripts/configuracao.ps1`](scripts/configuracao.ps1).
@@ -95,7 +97,9 @@ powershell -ExecutionPolicy Bypass -File scripts\3_dependencias.ps1
 powershell -ExecutionPolicy Bypass -File scripts\0_nova_versao.ps1 -SemAndroid
 ```
 
-Para o Android, rode uma vez `scripts\android\1_criar_wsl.ps1` e depois `0_nova_versao.ps1` sem `-SemAndroid`. Para publicar a release no GitHub (com o GitHub CLI logado), acrescente `-Publicar`.
+Para o Android, rode uma vez `scripts\android\1_criar_wsl.ps1` e depois `0_nova_versao.ps1` sem `-SemAndroid`.
+
+Os executáveis saem na pasta `Entrega` e em `<Entrega>\publicar\vX.Y.Z`, e são entregues por fora. **Commit e push não publicam nada:** nenhum workflow cria release. O `-Publicar`, que cria uma release no GitHub com o GitHub CLI logado, só roda se for pedido explicitamente, e hoje não é usado.
 
 ### Versões e nomes dos arquivos
 
@@ -111,11 +115,11 @@ As releases seguem o [SemVer](https://semver.org/lang/pt-BR/). A tag é `vX.Y.Z`
 | `suporte-vX.Y.Z-console-x64-portable.exe` | Console Técnico portátil |
 | `suporte-vX.Y.Z-client-arm64.apk` / `-armv7.apk` | Cliente para Android |
 
-O `8_compilar_perfis.ps1` compila o Console e o Cliente x64. O **Cliente x86** sai do `x86_compilar.ps1` (rode o `x86_ferramentas.ps1` uma vez antes). Ele usa a **interface antiga do RustDesk (Sciter)**, porque o RustDesk não tem Flutter de 32 bits. O `2_marca.ps1` leva para ela o essencial: o aviso na janela de aceitar, a aprovação por clique sem senha na tela, o texto do ID e o serviço ligado sozinho ao abrir. Cada versão tem a sua entrada no `versao.json` (o x86 procura `<nome>-x86`), então a atualização automática não troca uma pela outra. O Técnico avulso ainda compila (`CADENA_PERFIL=tecnico`), mas não vai para a release.
+O `8_compilar_perfis.ps1` compila o Console e o Cliente x64. O **Cliente x86** sai do `x86_compilar.ps1` (rode o `x86_ferramentas.ps1` uma vez antes). Ele usa a **interface antiga do RustDesk (Sciter)**, porque o RustDesk não tem Flutter de 32 bits. O `2_marca.ps1` leva para ela o essencial: o aviso na janela de aceitar, a aprovação por clique sem senha na tela, o texto do ID e o serviço ligado sozinho ao abrir. Cada versão tem a sua entrada no `versao.json` (`<nome>-x86` no de 32 bits). O Técnico avulso ainda compila (`CADENA_PERFIL=tecnico`), mas não vai para a release.
 
 Use `0_nova_versao.ps1 -Versao 1.2.0` para escolher a versão. Sem `-Versao`, o script sobe o último número da anterior (1.0.0 → 1.0.1).
 
-Além da versão pública, existe um **número interno** (`<Entrega>\numero.txt`), que sobe a cada entrega e decide a atualização automática: os computadores instalados só atualizam para um número maior que o seu. O nome dos arquivos não importa para o atualizador, porque o `versao.json` assinado de cada release diz qual arquivo baixar. O Técnico e o Console são compilados com `--dart-define=APP_TYPE=tech`; o Cliente, com `APP_TYPE=client`.
+Além da versão pública, existe um **número interno** (`<Entrega>\numero.txt`), que sobe a cada entrega. Ele vai compilado no programa (`CADENA_NUMERO`) e no `versao.json`, e identifica cada compilação. Nunca volte o número para trás depois de entregar uma versão: as versões até a 1.1.0 ainda se atualizavam sozinhas para um número maior. O Técnico e o Console são compilados com `--dart-define=APP_TYPE=tech`; o Cliente, com `APP_TYPE=client`.
 
 ### API
 
@@ -142,7 +146,7 @@ Os instaladores do Windows são compilados no GitHub Actions pelo workflow [`.gi
 - servidor principal: `CADENA_SERVIDOR1`, `CADENA_CHAVE1`, `CADENA_NOME1`;
 - segundo servidor, opcional: `CADENA_SERVIDOR2`, `CADENA_CHAVE2`, `CADENA_NOME2`;
 - API: `CADENA_API`;
-- atualização automática: `CADENA_REPO_ATUALIZACAO` e `CADENA_CHAVE_ATUALIZACAO`, a chave **pública**;
+- releases e chave **pública** do `versao.json`: `CADENA_REPO_ATUALIZACAO` e `CADENA_CHAVE_ATUALIZACAO` (lidas pela configuração; os programas não as usam mais para se atualizar);
 - certificado da marca: `CADENA_CERTIFICADO`, o `.cer` **público** em base64.
 
 O workflow publica os executáveis como artefatos, junto com o pacote de fonte da AGPL.
@@ -157,7 +161,7 @@ Depois aponte `Certificado`, `CertificadoPfx` e `CertificadoSenha` no `config.lo
 
 Como o certificado não vem de uma autoridade certificadora, o Windows só o reconhece nos computadores onde ele está gravado como confiável. A instalação e a atualização gravam o certificado em *Autoridades de Certificação Raiz Confiáveis* e *Editores Confiáveis*. Nesses computadores, o pedido de permissão do Windows mostra o nome da empresa. O primeiro download continua com o aviso do SmartScreen. O certificado só serve para assinar código e não pode emitir outros certificados. Mesmo assim, guarde o `.pfx` e a senha com o mesmo cuidado da chave da atualização.
 
-A chave **privada** da atualização automática nunca vai para o GitHub. Para montar a release, baixe os executáveis para a pasta de entrega e rode `scripts\9_publicar.ps1 -SemCompilar` na máquina que guarda a chave.
+A chave **privada** que assina o `versao.json` nunca vai para o GitHub. Para montar a pasta da versão a partir de um build do Actions, baixe os executáveis para a pasta de entrega e rode `scripts\9_publicar.ps1 -SemCompilar` na máquina que guarda a chave.
 
 ## Licença e créditos
 
