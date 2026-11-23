@@ -402,8 +402,10 @@ fn cadena_perfil() -> serde_json::Value {
     if tecnico {
         padrao["allow-auto-record-outgoing"] = "Y".into();
     } else {
-        // O cliente aprova cada acesso na janela que traz o aviso da marca
-        padrao["approve-mode"] = "click".into();
+        // O cliente aprova cada acesso na janela que traz o aviso da marca. Trava (override), nao padrao: um padrao
+        // perde para uma opcao ja gravada na maquina (visto em 2026-11-23: um Cliente em "senha ou clique" mostrava a
+        // senha e o Console a pedia, e quem tem a senha entra sem o clique). Travado, ninguem muda nas Configuracoes
+        travas["approve-mode"] = "click".into();
         // A aba "Grupo" (computadores dos clientes, vindos da API) so existe no Tecnico
         travas["disable-group-panel"] = "Y".into();
         travas["allow-numeric-one-time-password"] = "Y".into();

@@ -12,6 +12,19 @@ O técnico não escolhe mais computador numa lista. O cliente chama o suporte e 
 - Tudo depende da constante `cadenaSoPorId` em `scripts/modelos/cadena_inicio.dart`. Com `false`, volta o visual com a lista. No `scripts/2_marca.ps1`, a área central usa o widget novo `CadenaSoId` quando a constante está ligada.
 - O painel da API não mudou: empresas, apelidos e dispositivos continuam lá.
 
+### Cliente: "só clique" travado (a senha não aparece nem é pedida)
+
+- **Problema visto em 23/11/2026 numa máquina de cliente:**
+  - a tela do Cliente mostrava a **senha**;
+  - o Console **pedia a senha**;
+  - a janela de aprovação aparecia mesmo assim.
+
+  O Cliente estava em "senha **ou** clique", o modo padrão do RustDesk. Nele, **quem tem a senha entra sem o clique do cliente**.
+- **Causa:** o `approve-mode = click` era um **padrão** (`default-settings`) do perfil do Cliente. O RustDesk lê as opções na ordem trava → opção gravada na máquina → padrão (`Config::get_option`/`get_or`). Uma opção já gravada nessa máquina, por uma instalação anterior ou pelas Configurações, venceu o padrão.
+- **Correção:** o `approve-mode = click` virou **trava** (`override-settings`) no Cliente, em `2_marca.ps1`, na função `cadena_perfil`. Agora vale em qualquer máquina, mesmo com configuração antiga, e fica bloqueado nas Configurações > Segurança.
+- **Decisão:** a senha aleatória do RustDesk **não** substitui a liberação de 10 minutos. Nesse modo, quem tem a senha entra sem clique, e a senha só muda depois de **usada** ou ao reiniciar. Um técnico com o ID e a senha poderia entrar dias depois. Ficam o **clique a cada acesso** e a **liberação por tempo**.
+- **Máquinas já instaladas:** reinstale o Cliente novo por cima.
+
 ### Cliente: liberação do acesso (o ID fixo só aceita conexão com o pedido do cliente)
 
 O ID é fixo, porque é calculado a partir do endereço MAC da placa de rede, e o técnico fica sabendo dele. Para o técnico não conseguir acessar quando quiser, o Cliente passou a **recusar qualquer pedido de conexão fora de uma liberação aberta pelo próprio cliente**. Optamos por não trocar o ID a cada atendimento: isso quebraria o painel, a auditoria e o vínculo com o ERP.
