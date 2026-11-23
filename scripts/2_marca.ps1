@@ -774,8 +774,95 @@ Trocar "$Fonte\src\flutter_ffi.rs" @{
   'pub fn main_get_common\(key: String\) -> String \{' = "pub fn main_get_common(key: String) -> String {`n    // CadenaTech: Console Tecnico (CADENA_PERFIL=console) abre os acessos em abas na janela principal`n    if key == `"cadena-console`" {`n        return if option_env!(`"CADENA_PERFIL`") == Some(`"console`") { `"Y`" } else { `"`" }.to_owned();`n    }`n    // CadenaTech: servidores que respondem, mostrados ao lado do `"Pronto`"`n    if key == `"cadena-servidores`" {`n        return crate::common::cadena_servidores_conectados();`n    }`n    // CadenaTech: tela do envio das gravacoes por FTP`n    #[cfg(not(any(target_os = `"android`", target_os = `"ios`")))]`n    {`n        if key == `"cadena-ftp-estado`" {`n            return crate::cadena_ftp::estado_json();`n        }`n        if key == `"cadena-ftp-testar`" {`n            return crate::cadena_ftp::testar();`n        }`n    }"
   'pub fn main_set_common\(_key: String, _value: String\) \{' = "pub fn main_set_common(_key: String, _value: String) {`n    // CadenaTech: tela do envio das gravacoes por FTP`n    #[cfg(not(any(target_os = `"android`", target_os = `"ios`")))]`n    {`n        if _key == `"cadena-ftp-salvar`" {`n            crate::cadena_ftp::salvar_json(&_value);`n            return;`n        }`n        if _key == `"cadena-ftp-desligar`" {`n            crate::cadena_ftp::desligar();`n            return;`n        }`n    }"
 }
+# Cliente (cadena_cm.dart): a janela de aprovacao abre ao lado da janela principal. A principal e outro processo:
+# acha pelo titulo (o nome exibido da marca) na classe das janelas do Flutter, fora deste processo, visivel e nao
+# minimizada. A de aprovacao e a janela Flutter deste processo. Vai a direita da principal; sem espaco no monitor,
+# a esquerda; sempre dentro da area de trabalho. Sem a principal na tela, nada muda (fica no canto do RustDesk)
+$JanelaPrincipal = @'
+pub fn main_set_common(_key: String, _value: String) {
+    // CadenaTech: Cliente, janela de aprovacao ao lado da janela principal (cadena_cm.dart)
+    #[cfg(target_os = "windows")]
+    if _key == "cadena-cm-ao-lado" {
+        use winapi::shared::windef::{HWND, RECT};
+        use winapi::um::winuser::{
+            FindWindowExW, GetMonitorInfoW, GetWindowRect, GetWindowThreadProcessId, IsIconic,
+            IsWindowVisible, MonitorFromWindow, SetWindowPos, MONITORINFO,
+            MONITOR_DEFAULTTONEAREST, SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER,
+        };
+        let largo = |s: &str| s.encode_utf16().chain(Some(0)).collect::<Vec<u16>>();
+        let classe = largo("FLUTTER_RUNNER_WIN32_WINDOW");
+        let titulo = largo(&crate::common::cadena_nome_exibido());
+        let pid_de = |h: HWND| {
+            let mut pid = 0u32;
+            unsafe { GetWindowThreadProcessId(h, &mut pid) };
+            pid
+        };
+        let eu = std::process::id();
+        let (mut principal, mut aprovacao): (HWND, HWND) =
+            (std::ptr::null_mut(), std::ptr::null_mut());
+        let mut h: HWND = std::ptr::null_mut();
+        loop {
+            h = unsafe { FindWindowExW(std::ptr::null_mut(), h, classe.as_ptr(), titulo.as_ptr()) };
+            if h.is_null() {
+                break;
+            }
+            if pid_de(h) != eu && unsafe { IsWindowVisible(h) != 0 && IsIconic(h) == 0 } {
+                principal = h;
+                break;
+            }
+        }
+        h = std::ptr::null_mut();
+        loop {
+            h = unsafe { FindWindowExW(std::ptr::null_mut(), h, classe.as_ptr(), std::ptr::null()) };
+            if h.is_null() {
+                break;
+            }
+            if pid_de(h) == eu {
+                aprovacao = h;
+                break;
+            }
+        }
+        if principal.is_null() || aprovacao.is_null() {
+            return;
+        }
+        unsafe {
+            let mut p: RECT = std::mem::zeroed();
+            let mut a: RECT = std::mem::zeroed();
+            if GetWindowRect(principal, &mut p) == 0 || GetWindowRect(aprovacao, &mut a) == 0 {
+                return;
+            }
+            let mut info: MONITORINFO = std::mem::zeroed();
+            info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
+            let monitor = MonitorFromWindow(principal, MONITOR_DEFAULTTONEAREST);
+            if GetMonitorInfoW(monitor, &mut info) == 0 {
+                return;
+            }
+            let area = info.rcWork;
+            let (largura, altura) = (a.right - a.left, a.bottom - a.top);
+            let espaco = 8;
+            let mut x = p.right + espaco;
+            if x + largura > area.right {
+                x = p.left - espaco - largura;
+            }
+            x = x.max(area.left).min(area.right - largura);
+            let y = p.top.max(area.top).min(area.bottom - altura);
+            SetWindowPos(
+                aprovacao,
+                std::ptr::null_mut(),
+                x,
+                y,
+                0,
+                0,
+                SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+            );
+        }
+        return;
+    }
+'@
+$JanelaPrincipal = ($JanelaPrincipal -replace "`r`n", "`n").TrimEnd("`n")
+Trocar "$Fonte\src\flutter_ffi.rs" @{ 'pub fn main_set_common\(_key: String, _value: String\) \{' = $JanelaPrincipal }
 Trocar "$Fonte\flutter\lib\desktop\pages\desktop_setting_page.dart" @{
-  'if \(!isWeb\) record\(context\),' = "if (!isWeb) record(context),`n        if (!isWeb && bind.isOutgoingOnly()) const _CadenaFtp(),"
+  'if \(!isWeb\) record\(context\),' ="if (!isWeb) record(context),`n        if (!isWeb && bind.isOutgoingOnly()) const _CadenaFtp(),"
 }
 # A tela do FTP (so ASCII, acentos como ç) vai no fim do desktop_setting_page.dart
 $Config = "$Fonte\flutter\lib\desktop\pages\desktop_setting_page.dart"
@@ -799,6 +886,24 @@ $TelaCliente = [IO.File]::ReadAllText("$PSScriptRoot\modelos\cadena_cliente.dart
 & git -C $Fonte add -N flutter/lib/desktop/pages/cadena_cliente.dart
 Copy-Item -Force "$PSScriptRoot\modelos\cadena_cartao.dart" "$Fonte\flutter\lib\common\widgets\cadena_cartao.dart"
 & git -C $Fonte add -N flutter/lib/desktop/pages/cadena_inicio.dart flutter/lib/common/widgets/cadena_cartao.dart
+# Cliente, janela de aprovacao (--cm), 2026-11-23: ganha o topo com logo, ID e servidores (cadena_cm.dart), fica mais
+# alta para caber e abre ao lado da janela principal ("cadena-cm-ao-lado" no main_set_common, mais abaixo)
+Copy-Item -Force "$PSScriptRoot\modelos\cadena_cm.dart" "$Fonte\flutter\lib\desktop\pages\cadena_cm.dart"
+& git -C $Fonte add -N flutter/lib/desktop/pages/cadena_cm.dart
+Trocar "$Fonte\flutter\lib\desktop\pages\server_page.dart" @{
+  "import '../../models/server_model.dart';" = "import '../../models/server_model.dart';`nimport 'cadena_cm.dart';"
+  '        _CmHeader\(client: client\),' = "        // CadenaTech: no Cliente, topo com logo, ID e servidores (cadena_cm.dart)`n        if (bind.isIncomingOnly()) const CadenaCmMarca(),`n        _CmHeader(client: client),"
+}
+# O RustDesk poe a janela de aprovacao no canto superior direito ao abrir e ao voltar depois de escondida (as duas
+# chamadas de setSizeAlignment do showCmWindow); logo depois, o Cliente a leva para o lado da janela principal
+Trocar "$Fonte\flutter\lib\main.dart" @{
+  "import 'package:flutter_hbb/desktop/pages/server_page.dart';" = "import 'package:flutter_hbb/desktop/pages/server_page.dart';`nimport 'package:flutter_hbb/desktop/pages/cadena_cm.dart';"
+  'kConnectionManagerWindowSizeClosedChat, Alignment\.topRight\);' = "kConnectionManagerWindowSizeClosedChat, Alignment.topRight);`n    cadenaCmAoLado(); // CadenaTech: ao lado da janela principal (cadena_cm.dart)"
+}
+Trocar "$Fonte\flutter\lib\consts.dart" @{
+  'const Size kConnectionManagerWindowSizeClosedChat = Size\(300, 490\);' = "// CadenaTech: mais alta para o topo com logo, ID e servidores (cadena_cm.dart)`nconst Size kConnectionManagerWindowSizeClosedChat = Size(300, 600);"
+  'const Size kConnectionManagerWindowSizeOpenChat = Size\(700, 490\);' = 'const Size kConnectionManagerWindowSizeOpenChat = Size(700, 600);'
+}
 # Aba Clientes: a API manda o apelido do computador (definido no painel, tela Dispositivos) em "alias"; o cartao
 # mostra o apelido no lugar do nome do computador. A empresa vem como grupo (device_group_name). O telefone e o
 # sistema usado vao para cadenaExtras (cadena_console.dart), lidos pela linha do Tecnico e pela busca
