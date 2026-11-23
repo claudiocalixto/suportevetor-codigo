@@ -83,7 +83,7 @@ $($Marca.ExibidoCliente) $Versao e uma versao modificada do RustDesk, distribuid
 Codigo original: https://github.com/rustdesk/rustdesk, tag $Versao, commit $commit
 Submodulo libs/hbb_common: commit $sub
 Modificacoes: rustdesk.patch e hbb_common.patch, gerados pelos scripts do CadenaTech:
-https://github.com/cadena89/cadenasuporte
+https://github.com/claudiocalixto/suportevetor-codigo
 "@
 [IO.File]::WriteAllText("$Entrega\fonte\LEIA-ME.txt", $leia, $utf8)
 

@@ -117,7 +117,7 @@ $Alt = $Marca.Empresa.Replace('"', '&quot;')
 Trocar 'src\views\_builtin\login\index.vue' "import PwdLogin from './modules/pwd-login.vue';" "import PwdLogin from './modules/pwd-login.vue';`nimport marcaLogo from '@/assets/imgs/marca-logo.svg';`nimport marcaLogoBranco from '@/assets/imgs/marca-logo-branco.svg';"
 Trocar 'src\views\_builtin\login\index.vue' "          <SystemLogo class=`"text-64px text-primary lt-sm:text-48px`" />`n          <h3 class=`"text-28px text-primary font-500 lt-sm:text-22px`">{{ `$t('system.title') }}</h3>" "          <div class=`"flex-col`">`n            <img :src=`"themeStore.darkMode ? marcaLogoBranco : marcaLogo`" alt=`"$Alt`" class=`"h-44px lt-sm:h-34px`" />`n            <span class=`"pt-6px text-15px text-primary font-500`">$($Marca.PainelSubtitulo)</span>`n          </div>"
 # Rodape: credito ao projeto original e a licenca (AGPL-3.0, que exige oferecer o fonte modificado)
-Trocar 'src\layouts\modules\global-footer\index.vue' "      href=`"https://github.com/lantongxue/rustdesk-api-server-pro/blob/master/LICENSE`"" "      href=`"https://github.com/cadena89/cadenasuporte`""
+Trocar 'src\layouts\modules\global-footer\index.vue' "      href=`"https://github.com/lantongxue/rustdesk-api-server-pro/blob/master/LICENSE`"" "      href=`"https://github.com/claudiocalixto/suportevetor-codigo`""
 Trocar 'src\layouts\modules\global-footer\index.vue' "      Copyright MIT © 2024 lantongxue" "      $($Marca.Empresa) · CadenaTech, baseado no rustdesk-api-server-pro (lantongxue), licença AGPL-3.0"
 
 "=== compilando o painel"
