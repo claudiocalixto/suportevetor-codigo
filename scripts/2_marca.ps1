@@ -884,6 +884,129 @@ $Whats = ("$($Marca.WhatsApp)" -replace '\D', '')
 $TelaCliente = [IO.File]::ReadAllText("$PSScriptRoot\modelos\cadena_cliente.dart", [Text.Encoding]::UTF8).Replace('__SLOGAN__', (Para-Dart "$($Marca.Slogan)")).Replace('__WHATSAPP__', $Whats).Replace('__EMPRESA__', (Para-Dart $Empresa))
 [IO.File]::WriteAllText("$Fonte\flutter\lib\desktop\pages\cadena_cliente.dart", $TelaCliente, (New-Object Text.UTF8Encoding $false))
 & git -C $Fonte add -N flutter/lib/desktop/pages/cadena_cliente.dart
+# Cliente instalado: o RustDesk mostra um "Quit" nos cartoes de ajuda quando nao ha outro cartao, e a tela nova ja
+# tem o Sair (kCadenaSairNaTela, cadena_cliente.dart)
+Trocar "$Fonte\flutter\lib\desktop\pages\desktop_home_page.dart" @{
+  '    if \(bind\.isIncomingOnly\(\)\) \{\r?\n      return Align\(\r?\n        alignment: Alignment\.centerRight,\r?\n        child: OutlinedButton\(' = "    // CadenaTech: sem o Quit do RustDesk no Cliente; a tela dele ja tem o Sair (cadena_cliente.dart)`n    if (bind.isIncomingOnly() && !kCadenaSairNaTela) {`n      return Align(`n        alignment: Alignment.centerRight,`n        child: OutlinedButton("
+}
+# Tela de instalacao sem escolhas para o usuario final (Vetor, 2026-11-23): caminho padrao (Program Files\<nome>),
+# atalhos no Menu Iniciar e na Area de Trabalho sempre ligados, sem a impressora remota (ela apareceria na lista de
+# impressoras do cliente e leva documentos para o tecnico), sem o aviso de licenca do RustDesk e sem "Executar sem
+# instalar". Ficam o titulo, uma frase e os botoes Cancelar e Instalar. Vale para o Cliente e o Console
+$TelaInstalacao = @'
+  @override
+  Widget build(BuildContext context) {
+    final double em = 13;
+    // CadenaTech: instalacao sem escolhas (2_marca.ps1): caminho padrao, atalhos sempre, sem impressora, sem licenca
+    return Scaffold(
+        backgroundColor: null,
+        body: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(translate('Installation'),
+                  style: Theme.of(context).textTheme.headlineMedium),
+              Text('O ${cadenaNomeExibido()} será instalado neste computador.',
+                      style: const TextStyle(fontSize: 15))
+                  .marginSymmetric(vertical: 2 * em),
+              Row(
+                children: [
+                  Expanded(
+                    // NOT use Offstage to wrap LinearProgressIndicator
+                    child: Obx(() => showProgress.value
+                        ? LinearProgressIndicator().marginOnly(right: 10)
+                        : Offstage()),
+                  ),
+                  Obx(
+                    () => OutlinedButton.icon(
+                      icon: Icon(Icons.close_rounded, size: 16),
+                      label: Text(translate('Cancel')),
+                      onPressed: cancelEnabled.value
+                          ? () => windowManager.close()
+                          : null,
+                      style: buttonStyle,
+                    ).marginOnly(right: 10),
+                  ),
+                  Obx(
+                    () => ElevatedButton.icon(
+                      icon: Icon(Icons.done_rounded, size: 16),
+                      label: const Text('Instalar'),
+                      onPressed: btnEnabled.value ? install : null,
+                      style: buttonStyle,
+                    ),
+                  ),
+                ],
+              )
+            ],
+          ).paddingSymmetric(horizontal: 4 * em, vertical: 3 * em),
+        ));
+  }
+
+  Future<void> install() async {
+'@
+$TelaInstalacao = ($TelaInstalacao -replace "`r`n", "`n").TrimEnd("`n")
+Trocar "$Fonte\flutter\lib\desktop\pages\install_page.dart" @{
+  '(?s)  @override\r?\n  Widget build\(BuildContext context\) \{\r?\n    final double em = 13;.*?\r?\n  Future<void> install\(\) async \{' = $TelaInstalacao
+  "import 'package:url_launcher/url_launcher_string\.dart';" = '// CadenaTech: sem o link do acordo de licenca, o url_launcher_string nao e mais usado'
+  "      if \(startmenu\.value\) args \+= ' startmenu';\r?\n      if \(desktopicon\.value\) args \+= ' desktopicon';\r?\n      if \(printer\.value\) args \+= ' printer';" = "      // CadenaTech: sempre com os atalhos e sem a impressora (a tela nao mostra as opcoes)`n      args = ' startmenu desktopicon';"
+}
+# Liberacao do acesso (Vetor, 2026-11-23). O Cliente so aceita pedido de conexao com a liberacao aberta pelo proprio
+# cliente (cadena-liberado-ate, gravada pela janela: cadena_cliente.dart) ou com um atendimento ja em andamento
+# (AUTHED_CONNS: ex. a transferencia de arquivo aberta no meio do acesso). Fora dela, recusa antes da janela de
+# aprovacao, sem mostrar nada ao cliente, com a mensagem para o tecnico. O portao fica antes da "sessao recente"
+# (reconexao rapida), entao tambem a bloqueia. Ao fim de cada atendimento autorizado, a liberacao vai a agora + 10 min
+# (para reconectar e para reiniciar o computador). Liberacao mais longa que 30 min e ignorada: nem uma opcao
+# adulterada deixa o acesso aberto indefinidamente. So vale no Cliente (incoming-only)
+$Liberacao = @'
+// CadenaTech: liberacao do acesso no Cliente (ver cadena_cliente.dart, _CadenaLiberacao)
+const CADENA_LIBERADO_ATE: &str = "cadena-liberado-ate";
+const CADENA_PRAZO_S: i64 = 600;
+const CADENA_PRAZO_MAX_S: i64 = 1800;
+const CADENA_MSG_FECHADO: &str =
+    "O cliente não liberou o acesso. Peça para ele abrir o Suporte Vetor Sistemas e tente de novo.";
+
+fn cadena_agora() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+fn cadena_liberado() -> bool {
+    if !hbb_common::config::is_incoming_only() {
+        return true;
+    }
+    if !AUTHED_CONNS.lock().unwrap().is_empty() {
+        return true;
+    }
+    let ate = hbb_common::config::Config::get_option(CADENA_LIBERADO_ATE)
+        .parse::<i64>()
+        .unwrap_or(0);
+    let agora = cadena_agora();
+    ate >= agora && ate <= agora + CADENA_PRAZO_MAX_S
+}
+
+fn cadena_estender_liberacao() {
+    if !hbb_common::config::is_incoming_only() {
+        return;
+    }
+    let novo = cadena_agora() + CADENA_PRAZO_S;
+    let atual = hbb_common::config::Config::get_option(CADENA_LIBERADO_ATE)
+        .parse::<i64>()
+        .unwrap_or(0);
+    if novo > atual {
+        hbb_common::config::Config::set_option(CADENA_LIBERADO_ATE.to_owned(), novo.to_string());
+    }
+}
+
+impl Drop for Connection {
+'@
+$Liberacao = ($Liberacao -replace "`r`n", "`n").TrimEnd("`n")
+Trocar "$Fonte\src\server\connection.rs" @{
+  '(?m)^impl Drop for Connection \{' = $Liberacao
+  '            self\.reset_session_scope_for_login\(\);\r?\n            if !self\.check_id_whitelist\(\)\.await \{\r?\n                return false;\r?\n            \}' = "            self.reset_session_scope_for_login();`n            if !self.check_id_whitelist().await {`n                return false;`n            }`n            // CadenaTech: so com a liberacao do cliente aberta (cadena_liberado)`n            if !cadena_liberado() {`n                log::info!(`"CadenaTech: acesso de {} recusado, liberacao fechada`", lr.my_id);`n                self.send_login_error(CADENA_MSG_FECHADO).await;`n                sleep(1.).await;`n                return false;`n            }"
+  '    async fn on_close\(&mut self, reason: &str, lock: bool\) \{\r?\n        if self\.closed \{\r?\n            return;\r?\n        \}\r?\n        self\.closed = true;' = "    async fn on_close(&mut self, reason: &str, lock: bool) {`n        if self.closed {`n            return;`n        }`n        self.closed = true;`n        // CadenaTech: fim de um atendimento autorizado: liberacao por mais CADENA_PRAZO_S`n        if self.authorized {`n            cadena_estender_liberacao();`n        }"
+}
 Copy-Item -Force "$PSScriptRoot\modelos\cadena_cartao.dart" "$Fonte\flutter\lib\common\widgets\cadena_cartao.dart"
 & git -C $Fonte add -N flutter/lib/desktop/pages/cadena_inicio.dart flutter/lib/common/widgets/cadena_cartao.dart
 # Cliente, janela de aprovacao (--cm), 2026-11-23: ganha o topo com logo, ID e servidores (cadena_cm.dart), fica mais

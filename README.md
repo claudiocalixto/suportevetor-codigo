@@ -13,6 +13,10 @@ O repositório **não traz uma cópia do RustDesk**. Os scripts baixam o código
 **Dois programas para Windows e Android**, gerados do mesmo código:
 
 - **Cadena Suporte** (Cliente), instalado no computador atendido. Só recebe acesso. Cada conexão abre uma janela de aprovação com um aviso contra golpes; o Android mostra o mesmo aviso. No Windows, a janela de aprovação traz no topo o logo da marca, o ID do computador e o status dos servidores ([`scripts/modelos/cadena_cm.dart`](scripts/modelos/cadena_cm.dart)), e abre ao lado da janela principal. O botão "Chamar Suporte no WhatsApp" da tela principal só aparece se o campo `WhatsApp` da marca estiver preenchido.
+
+  **Liberação do acesso:** o Cliente só aceita pedido de conexão enquanto o próprio cliente estiver com a liberação aberta. Abrir ou focar a janela, ou o botão Liberar, libera por 10 minutos, e cada atendimento estende o prazo por mais 10 minutos ao terminar. Fora disso, a conexão é recusada sem aparecer nada para o cliente, e o técnico recebe a mensagem "O cliente não liberou o acesso". Detalhes no [CHANGELOG](CHANGELOG.md).
+
+  **Instalação sem escolhas:** o instalador mostra só os botões Cancelar e Instalar. Ele instala na pasta padrão, sempre cria os atalhos e não instala a impressora remota.
 - **Cadena Técnico** (e o Console Técnico, com os acessos em abas), para quem atende. Só acessa e exige login na conta da API. **O acesso sempre parte do cliente:** ele chama o suporte e informa o ID, e o técnico digita esse ID na barra de cima e clica em Conectar. Não há lista de computadores para escolher: a lateral tem só Configurações, a conta e o status dos servidores, e a área central mostra a orientação. Cada acesso é gravado, e as gravações podem ir sozinhas para um servidor FTP (Configurações > Geral, com endereço para a rede local e para fora).
 
   O visual antigo, com as seções Clientes (por empresa), Recentes e Favoritos, a busca e os cartões, continua no código. Para voltar a ele, troque `cadenaSoPorId` para `false` em [`scripts/modelos/cadena_inicio.dart`](scripts/modelos/cadena_inicio.dart).

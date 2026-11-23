@@ -12,6 +12,40 @@ O técnico não escolhe mais computador numa lista. O cliente chama o suporte e 
 - Tudo depende da constante `cadenaSoPorId` em `scripts/modelos/cadena_inicio.dart`. Com `false`, volta o visual com a lista. No `scripts/2_marca.ps1`, a área central usa o widget novo `CadenaSoId` quando a constante está ligada.
 - O painel da API não mudou: empresas, apelidos e dispositivos continuam lá.
 
+### Cliente: liberação do acesso (o ID fixo só aceita conexão com o pedido do cliente)
+
+O ID é fixo, porque é calculado a partir do endereço MAC da placa de rede, e o técnico fica sabendo dele. Para o técnico não conseguir acessar quando quiser, o Cliente passou a **recusar qualquer pedido de conexão fora de uma liberação aberta pelo próprio cliente**. Optamos por não trocar o ID a cada atendimento: isso quebraria o painel, a auditoria e o vínculo com o ERP.
+
+- **Regra:** sem liberação, a conexão é recusada **antes** da janela de aprovação, sem mostrar nada ao cliente. O Console mostra: *"O cliente não liberou o acesso. Peça para ele abrir o Suporte Vetor Sistemas e tente de novo."*
+  - Dentro da liberação, nada muda: a janela de aprovação aparece, e o cliente clica em Aceitar.
+- **Quem libera:** abrir ou focar a janela do Suporte Vetor, ou o botão **Liberar**. Vale por **10 minutos**.
+  - A tela mostra **"Acesso liberado ao suporte · 9:58"** com o botão **Encerrar**, ou "Acesso fechado ao suporte" com o botão **Liberar**.
+  - Depois de Encerrar, focar a janela não libera de novo: só o botão Liberar ou abrir a janela outra vez. É o widget `_CadenaLiberacao`, em `scripts/modelos/cadena_cliente.dart`.
+- **Durante um atendimento:** novas conexões passam, como a transferência de arquivo aberta no meio do acesso (`AUTHED_CONNS` não vazio).
+- **Fim de cada atendimento autorizado:** a liberação vai para "agora + 10 min", para reconectar ou reiniciar o computador (`on_close`).
+- **Proteção:** uma liberação com prazo maior que 30 minutos é ignorada, então nem uma opção adulterada deixa o acesso aberto.
+- **Onde fica:**
+  - a opção `cadena-liberado-ate` (hora do fechamento, em segundos desde 1970) é gravada nas opções do **serviço** pela janela, via IPC, sem precisar de administrador. Vale para o instalado e sobrevive a um reinício dentro do prazo;
+  - o portão está em `src/server/connection.rs`, logo depois da lista de IDs permitidos (`check_id_whitelist`) e **antes** da reconexão rápida ("sessão recente"), que também fica bloqueada;
+  - tudo isso entra pelo `2_marca.ps1` (`cadena_liberado`, `cadena_estender_liberacao`) e só vale no Cliente (incoming-only).
+- **Pendente:** um alerta na API para tentativas fora da liberação. Exige mudar o `cadena-api.patch` e instalar na Máquina B.
+- **Ainda não feito:** o comando `--vetor-liberar`, para o Fly liberar sem abrir a janela.
+
+### Instalador sem escolhas para o usuário final
+
+- A tela de instalação, do Cliente e do Console, ficou só com o título, a frase "O Suporte Vetor Sistemas será instalado neste computador." e os botões **Cancelar** e **Instalar**.
+- **Saíram:**
+  - o caminho e o "Alterar Caminho": instala sempre na pasta padrão, `C:\Program Files\<nome>`;
+  - as opções de atalho, que agora são **sempre criados** no Menu Iniciar e na Área de Trabalho;
+  - a **impressora remota**, que **nunca** é instalada. Ela apareceria na lista de impressoras do cliente e leva documentos para o técnico;
+  - o aviso e o link do acordo de licença do RustDesk;
+  - o botão "Executar sem instalar".
+- No `2_marca.ps1`, uma troca substitui o `build` do `install_page.dart` e fixa os argumentos da instalação em `startmenu desktopicon`.
+
+### Cliente: sem o "Sair" duplicado
+
+- O Cliente **instalado** mostrava, além do nosso "Sair", o "Quit" do RustDesk. Ele aparece nos cartões de ajuda quando não há outro cartão. Esse "Quit" foi escondido no Cliente (`kCadenaSairNaTela`).
+
 ### Cliente: janela de aprovação com as informações da tela principal, ao lado dela
 
 Quando o técnico pede acesso, o Cliente mostra duas janelas: a principal e a de aprovação. No RustDesk, elas são processos separados, e o Aceitar/Cancelar só existe na de aprovação. Por isso, elas não foram fundidas: a de aprovação ficou completa e passou a abrir junto da principal.

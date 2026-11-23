@@ -1,16 +1,20 @@
 // CadenaTech: tela do Cliente (so recebe acesso), nos 3 estilos visuais (style_manager.dart, aprovados em
-// 2026-11-13): logo da marca, ID grande (e a senha, quando o acesso aceita senha), botao verde para chamar o suporte
-// no WhatsApp, Sair, o status no rodape e a paleta discreta no canto para trocar o estilo. Sem abas nem
+// 2026-11-13): logo da marca, ID grande (e a senha, quando o acesso aceita senha), a linha da liberacao do acesso
+// (2026-11-23, _CadenaLiberacao), botao verde para chamar o suporte no WhatsApp (so com o WhatsApp na marca), Sair,
+// o status no rodape e a paleta discreta no canto para trocar o estilo. Sem abas nem
 // configuracoes visiveis: o clique direito na paleta abre as Configuracoes (atalho escondido, para o tecnico usar
 // durante o atendimento). A logica continua a do RustDesk: o desktop_home_page.dart passa o aviso de senha, os cartoes de
 // ajuda (instalar, permissoes) e o OnlineStatusWidget, e a janela segue a altura medida pela chave (_childKey).
 // O fundo e o tema vem do CadenaFundo, em volta da tela inteira.
 // O 2_marca.ps1 copia este arquivo para flutter/lib/desktop/pages/cadena_cliente.dart e troca os __CAMPOS__.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/formatter/id_formatter.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
+import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/theme/style_manager.dart';
 import 'package:get/get.dart';
@@ -28,6 +32,20 @@ const String kCadenaWhatsApp = '__WHATSAPP__';
 const String kCadenaEmpresa = '__EMPRESA__';
 
 const _verde = Color(0xFF22C55E);
+
+/// A tela do Cliente tem o proprio botao Sair: o "Quit" do RustDesk (cartoes de ajuda do desktop_home_page.dart,
+/// que aparece no Cliente instalado) fica escondido para nao duplicar
+const bool kCadenaSairNaTela = true;
+
+/// Liberacao do acesso (Vetor, 2026-11-23). O Cliente so aceita pedido de conexao com a liberacao aberta pelo proprio
+/// cliente (ou com um atendimento ja em andamento): fora dela, o connection.rs recusa sem mostrar nada. Abrir ou
+/// focar esta janela libera por kCadenaPrazoLiberacao; o botao Encerrar fecha antes. Quando o ultimo atendimento
+/// termina, o servico estende mais o mesmo prazo. O valor e a hora (segundos desde 1970) em que a liberacao fecha,
+/// gravada nas opcoes do servico (vale para o instalado e sobrevive a um reinicio dentro do prazo)
+const String kCadenaLiberadoAte = 'cadena-liberado-ate';
+const int kCadenaPrazoLiberacao = 600;
+
+int _agoraS() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
 class CadenaPainelCliente extends StatelessWidget {
   /// Chave da coluna medida para o tamanho da janela (_childKey do desktop_home_page)
@@ -210,6 +228,7 @@ class _CadenaCredenciaisState extends State<_CadenaCredenciais> {
                     if (senha != null) const SizedBox(height: 8),
                     if (senha != null) _caixaInterna(p, senha),
                     if (aviso != null) aviso.paddingOnly(top: 10),
+                    _CadenaLiberacao(p: p).paddingOnly(top: 10),
                   ]),
                 ),
                 const SizedBox(height: 14),
@@ -246,6 +265,7 @@ class _CadenaCredenciaisState extends State<_CadenaCredenciais> {
                   id,
                   if (senha != null) senha.paddingOnly(top: 6),
                   if (aviso != null) aviso.paddingOnly(top: 10),
+                  _CadenaLiberacao(p: p).paddingOnly(top: 10),
                 ]),
               ),
               const SizedBox(height: 18),
@@ -370,4 +390,111 @@ class _CadenaCredenciaisState extends State<_CadenaCredenciais> {
           child: const Text('Sair'),
         ),
       );
+}
+
+/// Linha da liberacao: "Acesso liberado · 9:58 [Encerrar]" ou "Acesso fechado ao suporte [Liberar]".
+/// Libera ao abrir e ao focar a janela (o Fly abre/traz esta janela quando o cliente aceita o pedido do tecnico),
+/// a nao ser que o cliente tenha clicado em Encerrar: ai so volta pelo botao Liberar ou abrindo a janela de novo
+class _CadenaLiberacao extends StatefulWidget {
+  final CadenaPaleta p;
+  const _CadenaLiberacao({Key? key, required this.p}) : super(key: key);
+
+  @override
+  State<_CadenaLiberacao> createState() => _CadenaLiberacaoState();
+}
+
+class _CadenaLiberacaoState extends State<_CadenaLiberacao>
+    with WindowListener {
+  int _ate = 0;
+  int _ciclo = 0;
+  bool _encerradoPeloCliente = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    windowManager.addListener(this);
+    _liberar();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      // Relê do servico a cada 5 s: ele estende a liberacao quando um atendimento termina
+      if (++_ciclo % 5 == 0) _ler();
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    windowManager.removeListener(this);
+    super.dispose();
+  }
+
+  @override
+  void onWindowFocus() {
+    if (!_encerradoPeloCliente) _liberar();
+  }
+
+  Future<void> _ler() async {
+    final v = await bind.mainGetOption(key: kCadenaLiberadoAte);
+    if (mounted) setState(() => _ate = int.tryParse(v) ?? 0);
+  }
+
+  Future<void> _liberar() async {
+    _encerradoPeloCliente = false;
+    final ate = _agoraS() + kCadenaPrazoLiberacao;
+    setState(() => _ate = ate);
+    await bind.mainSetOption(key: kCadenaLiberadoAte, value: '$ate');
+  }
+
+  Future<void> _encerrar() async {
+    _encerradoPeloCliente = true;
+    setState(() => _ate = 0);
+    await bind.mainSetOption(key: kCadenaLiberadoAte, value: '');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.p;
+    final resta = _ate - _agoraS();
+    final liberado = resta > 0;
+    final tempo = liberado
+        ? '${resta ~/ 60}:${(resta % 60).toString().padLeft(2, '0')}'
+        : '';
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: liberado ? _verde : p.textoSuave,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            liberado
+                ? 'Acesso liberado ao suporte · $tempo'
+                : 'Acesso fechado ao suporte',
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: liberado ? _verde : p.textoSuave),
+          ),
+        ),
+        const SizedBox(width: 6),
+        TextButton(
+          onPressed: liberado ? _encerrar : _liberar,
+          style: TextButton.styleFrom(
+            foregroundColor: p.texto,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            minimumSize: const Size(0, 30),
+          ),
+          child: Text(liberado ? 'Encerrar' : 'Liberar'),
+        ),
+      ],
+    );
+  }
 }
