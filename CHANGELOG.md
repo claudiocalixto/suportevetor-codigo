@@ -24,7 +24,7 @@ Quando o técnico pede acesso, o Cliente mostra duas janelas: a principal e a de
   - ele põe a aprovação à direita da principal, alinhada pelo topo e com 8 px de espaço. Se não couber, põe à esquerda, sempre dentro da área de trabalho do monitor;
   - sem a principal na tela, a aprovação fica no canto, como no RustDesk.
 - **Sem o botão "Chamar Suporte no WhatsApp":** o campo `WhatsApp` da marca da Vetor, que fica fora do repositório, foi esvaziado. O telefone do suporte continua no aviso da janela de aprovação.
-  - **Mac:** o build do Mac lê a marca do segredo `CADENA_MARCA_ZIP` do ambiente `vetor`, que ainda tem o WhatsApp. Atualize o segredo antes de compilar o Mac.
+  - **Mac:** o build do Mac lê a marca do segredo `CADENA_MARCA_ZIP` do ambiente `vetor`. O segredo foi gravado de novo em 23/11/2026 com a marca sem o WhatsApp: a pasta da marca em `.zip`, com o `marca.psd1` na raiz, em base64. Sempre que a marca mudar, grave o segredo de novo.
 - Testado em 23/11/2026 com o Cliente portátil: as duas janelas abrem lado a lado.
 
 ### Atualização manual: os programas não procuram versão nova
