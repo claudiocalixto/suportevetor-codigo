@@ -1,12 +1,18 @@
 # Mudanças
 
-## 1.1.4
+## 1.1.4 (número interno 19)
 
 ### Cliente: janela principal no canto superior direito
 
 A janela do Cliente abria no meio da tela, ou onde tinha sido fechada, e cobria o ERP.
 
 - **Agora:** ela abre sempre no **canto superior direito da área de trabalho**, sem cobrir a barra de tarefas. Vale para o monitor onde a janela está, ou para o principal.
+- **Ao voltar da bandeja**, ela também vai para o canto superior direito.
+  - Antes, voltava para onde estava e podia cobrir uma janela do sistema. Isso acontecia porque outra instância só mostrava de novo a janela escondida (`ShowWindow`), sem passar pelo Dart.
+  - Agora, um `WindowListener` em `cadena_cm.dart` reposiciona a janela no evento `show` do `window_manager`.
+- **Se o usuário arrastar a janela**, ela volta da bandeja onde ele a deixou.
+  - Isso vale só enquanto o programa estiver aberto: quando ele é aberto de novo, volta a valer o canto.
+  - O evento `moved` só chega no fim de um arraste (`WM_EXITSIZEMOVE`). O `SetWindowPos` do próprio programa não o dispara.
 - A janela de aprovação continua abrindo ao lado da principal. Como à direita não há espaço, ela vai para a esquerda.
 - **Como funciona:**
   - o `main.dart` chama `cadenaPrincipalNoCanto()` (`scripts/modelos/cadena_cm.dart`) logo depois do `restoreWindowPosition`;

@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common/formatter/id_formatter.dart';
 import 'package:get/get.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../common.dart';
 import '../../models/platform_model.dart';
@@ -22,9 +23,33 @@ void cadenaCmAoLado() {
 /// Chamada pelo main.dart ao abrir a janela principal, logo depois de restaurar a posicao salva: no Cliente, a janela
 /// abre sempre no canto superior direito da area de trabalho do monitor dela, para nao cobrir o ERP no centro da tela
 /// (ver "cadena-principal-canto" no main_set_common). A janela de aprovacao vai entao para a esquerda dela.
+/// Ao voltar da bandeja (outra instancia acha a janela escondida e chama ShowWindow, sem passar pelo Dart), o evento
+/// "show" do window_manager leva a janela de novo para o canto, a nao ser que o usuario a tenha arrastado neste
+/// processo ("moved" so vem no fim de um arraste, WM_EXITSIZEMOVE; o SetWindowPos do Rust nao o dispara). Ao abrir
+/// o programa de novo, vale o canto outra vez.
 void cadenaPrincipalNoCanto() {
   if (!isWindows || !bind.isIncomingOnly()) return;
   bind.mainSetCommon(key: 'cadena-principal-canto', value: '');
+  if (_cadenaCanto == null) {
+    _cadenaCanto = _CadenaCantoAoMostrar();
+    windowManager.addListener(_cadenaCanto!);
+  }
+}
+
+_CadenaCantoAoMostrar? _cadenaCanto;
+
+class _CadenaCantoAoMostrar with WindowListener {
+  bool _movidaPeloUsuario = false;
+
+  @override
+  void onWindowMoved() => _movidaPeloUsuario = true;
+
+  @override
+  void onWindowShow() {
+    if (!_movidaPeloUsuario) {
+      bind.mainSetCommon(key: 'cadena-principal-canto', value: '');
+    }
+  }
 }
 
 /// Topo da janela de aprovacao do Cliente: logo, "Seu ID" e o status dos servidores
