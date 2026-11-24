@@ -1,5 +1,18 @@
 # Mudanças
 
+## 1.1.4
+
+### Cliente: janela principal no canto superior direito
+
+A janela do Cliente abria no meio da tela, ou onde tinha sido fechada, e cobria o ERP.
+
+- **Agora:** ela abre sempre no **canto superior direito da área de trabalho**, sem cobrir a barra de tarefas. Vale para o monitor onde a janela está, ou para o principal.
+- A janela de aprovação continua abrindo ao lado da principal. Como à direita não há espaço, ela vai para a esquerda.
+- **Como funciona:**
+  - o `main.dart` chama `cadenaPrincipalNoCanto()` (`scripts/modelos/cadena_cm.dart`) logo depois do `restoreWindowPosition`;
+  - a função chama o Rust pela chave `cadena-principal-canto` do `main_set_common`, que posiciona a janela com `SetWindowPos` em pixels reais, como já é feito com a janela de aprovação.
+- Só no Cliente e só no Windows. O Técnico e o Console continuam como estavam.
+
 ## 1.1.3 (número interno 18)
 
 Compilada em 24/11/2026 só para Windows de 64 bits: Console, Cliente (`.exe` e `.msi`) e portáteis. **Sem Android e sem o Cliente x86**, porque a máquina de compilação nova ainda não tem a distro WSL (`1_criar_wsl.ps1`) nem as ferramentas de 32 bits (`x86_ferramentas.ps1`). A versão do MSI é `1.1.3.<revisão>`, e a unit do MitryusWeb a considera igual à `1.1.3` do `versao.json`.

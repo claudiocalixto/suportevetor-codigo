@@ -19,6 +19,14 @@ void cadenaCmAoLado() {
   bind.mainSetCommon(key: 'cadena-cm-ao-lado', value: '');
 }
 
+/// Chamada pelo main.dart ao abrir a janela principal, logo depois de restaurar a posicao salva: no Cliente, a janela
+/// abre sempre no canto superior direito da area de trabalho do monitor dela, para nao cobrir o ERP no centro da tela
+/// (ver "cadena-principal-canto" no main_set_common). A janela de aprovacao vai entao para a esquerda dela.
+void cadenaPrincipalNoCanto() {
+  if (!isWindows || !bind.isIncomingOnly()) return;
+  bind.mainSetCommon(key: 'cadena-principal-canto', value: '');
+}
+
 /// Topo da janela de aprovacao do Cliente: logo, "Seu ID" e o status dos servidores
 class CadenaCmMarca extends StatefulWidget {
   const CadenaCmMarca({Key? key}) : super(key: key);

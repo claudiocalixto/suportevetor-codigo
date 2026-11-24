@@ -812,6 +812,65 @@ Trocar "$Fonte\src\flutter_ffi.rs" @{
 # a esquerda; sempre dentro da area de trabalho. Sem a principal na tela, nada muda (fica no canto do RustDesk)
 $JanelaPrincipal = @'
 pub fn main_set_common(_key: String, _value: String) {
+    // CadenaTech: Cliente, janela principal no canto superior direito da area de trabalho (cadena_cm.dart,
+    // cadenaPrincipalNoCanto). No processo principal do Cliente a unica janela do Flutter e a principal (a de
+    // aprovacao e outro processo, --cm). Em pixels reais, como a de aprovacao, sem depender da escala do Flutter
+    #[cfg(target_os = "windows")]
+    if _key == "cadena-principal-canto" {
+        use winapi::shared::windef::{HWND, RECT};
+        use winapi::um::winuser::{
+            FindWindowExW, GetMonitorInfoW, GetWindowRect, GetWindowThreadProcessId,
+            MonitorFromWindow, SetWindowPos, MONITORINFO, MONITOR_DEFAULTTOPRIMARY,
+            SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER,
+        };
+        let classe = "FLUTTER_RUNNER_WIN32_WINDOW"
+            .encode_utf16()
+            .chain(Some(0))
+            .collect::<Vec<u16>>();
+        let eu = std::process::id();
+        let mut janela: HWND = std::ptr::null_mut();
+        let mut h: HWND = std::ptr::null_mut();
+        loop {
+            h = unsafe { FindWindowExW(std::ptr::null_mut(), h, classe.as_ptr(), std::ptr::null()) };
+            if h.is_null() {
+                break;
+            }
+            let mut pid = 0u32;
+            unsafe { GetWindowThreadProcessId(h, &mut pid) };
+            if pid == eu {
+                janela = h;
+                break;
+            }
+        }
+        if janela.is_null() {
+            return;
+        }
+        unsafe {
+            let mut r: RECT = std::mem::zeroed();
+            if GetWindowRect(janela, &mut r) == 0 {
+                return;
+            }
+            let mut info: MONITORINFO = std::mem::zeroed();
+            info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
+            let monitor = MonitorFromWindow(janela, MONITOR_DEFAULTTOPRIMARY);
+            if GetMonitorInfoW(monitor, &mut info) == 0 {
+                return;
+            }
+            let area = info.rcWork;
+            let largura = r.right - r.left;
+            let x = (area.right - largura).max(area.left);
+            SetWindowPos(
+                janela,
+                std::ptr::null_mut(),
+                x,
+                area.top,
+                0,
+                0,
+                SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+            );
+        }
+        return;
+    }
     // CadenaTech: Cliente, janela de aprovacao ao lado da janela principal (cadena_cm.dart)
     #[cfg(target_os = "windows")]
     if _key == "cadena-cm-ao-lado" {
@@ -1054,6 +1113,8 @@ Trocar "$Fonte\flutter\lib\desktop\pages\server_page.dart" @{
 Trocar "$Fonte\flutter\lib\main.dart" @{
   "import 'package:flutter_hbb/desktop/pages/server_page.dart';" = "import 'package:flutter_hbb/desktop/pages/server_page.dart';`nimport 'package:flutter_hbb/desktop/pages/cadena_cm.dart';"
   'kConnectionManagerWindowSizeClosedChat, Alignment\.topRight\);' = "kConnectionManagerWindowSizeClosedChat, Alignment.topRight);`n    cadenaCmAoLado(); // CadenaTech: ao lado da janela principal (cadena_cm.dart)"
+  # Cliente: a janela principal abre no canto superior direito (Vetor, 2026-11-24), por cima da posicao restaurada
+  '    await restoreWindowPosition\(WindowType\.Main\);' = "    await restoreWindowPosition(WindowType.Main);`n    cadenaPrincipalNoCanto(); // CadenaTech: Cliente no canto superior direito (cadena_cm.dart)"
 }
 Trocar "$Fonte\flutter\lib\consts.dart" @{
   'const Size kConnectionManagerWindowSizeClosedChat = Size\(300, 490\);' = "// CadenaTech: mais alta para o topo com logo, ID e servidores (cadena_cm.dart)`nconst Size kConnectionManagerWindowSizeClosedChat = Size(300, 600);"
