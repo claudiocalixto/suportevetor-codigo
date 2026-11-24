@@ -1,6 +1,8 @@
 # Mudanças
 
-## 1.1.3 (em preparação)
+## 1.1.3 (número interno 18)
+
+Compilada em 24/11/2026 só para Windows de 64 bits: Console, Cliente (`.exe` e `.msi`) e portáteis. **Sem Android e sem o Cliente x86**, porque a máquina de compilação nova ainda não tem a distro WSL (`1_criar_wsl.ps1`) nem as ferramentas de 32 bits (`x86_ferramentas.ps1`). A versão do MSI é `1.1.3.<revisão>`, e a unit do MitryusWeb a considera igual à `1.1.3` do `versao.json`.
 
 ### Cliente: `--vetor-liberar`, liberação sem abrir a janela
 
