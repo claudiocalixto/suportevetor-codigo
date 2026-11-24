@@ -14,7 +14,7 @@ O repositório **não traz uma cópia do RustDesk**. Os scripts baixam o código
 
 - **Cadena Suporte** (Cliente), instalado no computador atendido. Só recebe acesso. Cada conexão abre uma janela de aprovação com um aviso contra golpes; o Android mostra o mesmo aviso. No Windows, a janela de aprovação traz no topo o logo da marca, o ID do computador e o status dos servidores ([`scripts/modelos/cadena_cm.dart`](scripts/modelos/cadena_cm.dart)), e abre ao lado da janela principal. O botão "Chamar Suporte no WhatsApp" da tela principal só aparece se o campo `WhatsApp` da marca estiver preenchido.
 
-  **Liberação do acesso:** o Cliente só aceita pedido de conexão enquanto o próprio cliente estiver com a liberação aberta. Abrir ou focar a janela, ou o botão Liberar, libera por 10 minutos, e cada atendimento estende o prazo por mais 10 minutos ao terminar. Fora disso, a conexão é recusada sem aparecer nada para o cliente, e o técnico recebe a mensagem "O cliente não liberou o acesso". Detalhes no [CHANGELOG](CHANGELOG.md).
+  **Liberação do acesso:** o Cliente só aceita pedido de conexão enquanto o próprio cliente estiver com a liberação aberta. Abrir ou focar a janela, o botão Liberar ou o comando `--vetor-liberar` (para o ERP liberar sem abrir a janela; ver [`integracao/mitryusweb`](integracao/mitryusweb)) libera por 10 minutos, e cada atendimento estende o prazo por mais 10 minutos ao terminar. Fora disso, a conexão é recusada sem aparecer nada para o cliente, e o técnico recebe a mensagem "O cliente não liberou o acesso". Detalhes no [CHANGELOG](CHANGELOG.md).
 
   **Instalação sem escolhas:** o instalador mostra só os botões Cancelar e Instalar. Ele instala na pasta padrão, sempre cria os atalhos e não instala a impressora remota.
 - **Cadena Técnico** (e o Console Técnico, com os acessos em abas), para quem atende. Só acessa e exige login na conta da API. **O acesso sempre parte do cliente:** ele chama o suporte e informa o ID, e o técnico digita esse ID na barra de cima e clica em Conectar. Não há lista de computadores para escolher: a lateral tem só Configurações, a conta e o status dos servidores, e a área central mostra a orientação. Cada acesso é gravado, e as gravações podem ir sozinhas para um servidor FTP (Configurações > Geral, com endereço para a rede local e para fora).
@@ -60,6 +60,7 @@ scripts/                compilacao do app (Windows e Android)
   modelos/              modulo de FTP (Rust), tela do FTP, tela inicial do Tecnico e janela de aprovacao do Cliente (Dart)
   android/              compilacao do Android num WSL (Ubuntu) dedicado
 api/                    API e painel: cadena-api.patch, pt-br.ts, atualizar_api.ps1, exemplos de configuracao
+integracao/mitryusweb/  botao "Suporte remoto" do MitryusWeb (Delphi 2007): instala/atualiza pelo MSI, le o ID e libera
 config.exemplo.psd1     modelo da configuracao local (copie para config.local.psd1)
 ```
 

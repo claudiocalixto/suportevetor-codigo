@@ -1,5 +1,29 @@
 # Mudanças
 
+## 1.1.3 (em preparação)
+
+### Cliente: `--vetor-liberar`, liberação sem abrir a janela
+
+Até a 1.1.2, o ERP só conseguia liberar o acesso abrindo a janela do Cliente, que cobria a tela do ERP.
+
+- **Comando novo:** `SuporteVetorSistemas.exe --vetor-liberar`. Ele libera o acesso por **10 minutos** sem abrir janela nenhuma, e o Cliente continua na bandeja.
+  - Grava a mesma opção que a janela grava (`cadena-liberado-ate`) nas opções do serviço, via IPC, sem administrador.
+  - Responde no stdout com a hora do fechamento (segundos desde 1970). Saída vazia quer dizer que não liberou, por exemplo com o serviço parado.
+  - Só vale no Cliente (incoming-only). No Técnico e no Console, não faz nada.
+- Quando o técnico conecta, aparece só a **janela de aprovação**, com o botão Aceitar. O clique do cliente continua obrigatório.
+- **Onde fica:** no `2_marca.ps1`, uma troca no `src/core_main.rs`, ao lado do `--get-id`.
+
+### Integração com o MitryusWeb (Delphi 2007)
+
+- **Pasta nova [`integracao/mitryusweb`](integracao/mitryusweb):** a unit `uSuporteVetor.pas` faz o botão "Suporte remoto" do ERP. Ela:
+  1. confere se o Cliente está instalado e em que versão, pelo UpgradeCode do MSI;
+  2. compara com o `versao.json` do site do MitryusWeb;
+  3. baixa o MSI, confere o SHA-256 e instala ou atualiza;
+  4. lê o ID com `--get-id`;
+  5. libera o acesso com `--vetor-liberar`.
+- **No site**, a cada versão: o `.msi` e o `versao.json` da pasta `publicar\vX.Y.Z`.
+- O `.gitattributes` faz o checkout dos `.pas` em Windows-1252, que é o que o Delphi 2007 lê.
+
 ## 1.1.2 (número interno 17)
 
 Junta tudo o que está na 1.1.1 abaixo e acrescenta o MSI do Cliente.
@@ -70,7 +94,7 @@ O ID é fixo, porque é calculado a partir do endereço MAC da placa de rede, e 
   - o portão está em `src/server/connection.rs`, logo depois da lista de IDs permitidos (`check_id_whitelist`) e **antes** da reconexão rápida ("sessão recente"), que também fica bloqueada;
   - tudo isso entra pelo `2_marca.ps1` (`cadena_liberado`, `cadena_estender_liberacao`) e só vale no Cliente (incoming-only).
 - **Pendente:** um alerta na API para tentativas fora da liberação. Exige mudar o `cadena-api.patch` e instalar na Máquina B.
-- **Ainda não feito:** o comando `--vetor-liberar`, para o Fly liberar sem abrir a janela.
+- O comando `--vetor-liberar`, para o ERP liberar sem abrir a janela, veio na 1.1.3.
 
 ### Instalador sem escolhas para o usuário final
 

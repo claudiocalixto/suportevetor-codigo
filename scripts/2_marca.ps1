@@ -597,6 +597,36 @@ $NomeCmd = ($NomeCmd -replace "`r`n", "`n").Replace('__PREFIXO__', $Prefixo)
 Trocar "$Fonte\src\core_main.rs" @{
   'if args\.len\(\) > 0 \{\r?\n        if args\[0\] == "--version" \{' = $NomeCmd.Substring(4)
 }
+# --vetor-liberar (Vetor, 2026-11-24): libera o acesso ao suporte por 10 minutos SEM abrir a janela do Cliente, para o
+# ERP chamar sem cobrir a tela dele (integracao/mitryusweb). Grava a mesma opcao que a janela grava
+# (cadena-liberado-ate, ver o bloco "Liberacao do acesso" abaixo) nas opcoes do servico, via IPC, sem administrador.
+# Imprime no stdout a hora do fechamento (segundos desde 1970) para quem chamou conferir; vazio = nao liberou.
+# So no Cliente (incoming-only); no Tecnico/Console nao faz nada. Fica ao lado do --get-id, que tambem nao pede root
+$Liberar = @'
+} else if args[0] == "--vetor-liberar" {
+            // CadenaTech: libera o acesso por 10 min sem abrir a janela (chamado pelo ERP). Ver 2_marca.ps1
+            if config::is_incoming_only() {
+                let ate = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs() as i64)
+                    .unwrap_or(0)
+                    + 600;
+                crate::ipc::set_option("cadena-liberado-ate", &ate.to_string());
+                let gravado = crate::ipc::get_options()
+                    .get("cadena-liberado-ate")
+                    .cloned()
+                    .unwrap_or_default();
+                if gravado == ate.to_string() {
+                    println!("{}", ate);
+                }
+            }
+            return None;
+        } else if args[0] == "--get-id" {
+'@
+$Liberar = ($Liberar -replace "`r`n", "`n").TrimEnd("`n")
+Trocar "$Fonte\src\core_main.rs" @{
+  '\} else if args\[0\] == "--get-id" \{' = $Liberar
+}
 $NomeLer = @'
 let mut display_name = get_builtin_option(keys::OPTION_DISPLAY_NAME);
         if display_name.is_empty() {
