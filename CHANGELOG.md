@@ -2,6 +2,14 @@
 
 ## 1.1.4 (número interno 19)
 
+Compilada em 24/11/2026, completa, pelo `0_nova_versao.ps1 -Versao 1.1.4`, sem `-Publicar`:
+- Console e Cliente x64 (`.exe`, `.msi` e portáteis);
+- Cliente x86 (`.exe` e portátil);
+- APKs arm64 e armv7, com o número do Android em 80;
+- `versao.json` assinado.
+
+Foi a primeira versão completa saída da máquina Claudio, já com a pasta de compilação em `compilacao\`.
+
 ### Cliente: janela principal no canto superior direito
 
 A janela do Cliente abria no meio da tela, ou onde tinha sido fechada, e cobria o ERP.
