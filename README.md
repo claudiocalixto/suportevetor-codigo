@@ -105,6 +105,19 @@ powershell -ExecutionPolicy Bypass -File scripts\0_nova_versao.ps1 -SemAndroid
 
 Para o Android, rode uma vez `scripts\android\1_criar_wsl.ps1` e depois `0_nova_versao.ps1` sem `-SemAndroid`.
 
+**Versão que saiu sem Android ou sem x86:** dá para completá-la sem subir o `numero.txt`, depois de montar o ambiente que faltava:
+1. Rode o `android/compilar_todos.sh` no WSL, com as mesmas variáveis que o `0_nova_versao.ps1` passa. Ele só sobe o número do Android.
+2. Rode o `x86_compilar.ps1`.
+3. Rode o `9_publicar.ps1 -SemCompilar`.
+
+O código em `<Raiz>\rustdesk` precisa estar na mesma versão. Não rode o `2_marca.ps1` de uma versão mais nova antes.
+
+**Para gravar o log de um script:** redirecione o processo inteiro, por exemplo `powershell -File scripts\x.ps1 > log.txt 2>&1`. Não use `& scripts\x.ps1 *>&1 | Out-File`. No Windows PowerShell 5.1, com `$ErrorActionPreference = 'Stop'`, qualquer linha em stderr de um programa externo (como os avisos do `wsl.exe` ou do `rustup`) vira erro fatal.
+
+**Para mudar a pasta de compilação de lugar:**
+1. Troque os caminhos no config.
+2. Mova o disco da distro com `wsl --manage <DistroWsl> --move <pasta>`, com o WSL desligado (`wsl --shutdown`). Se esse comando der acesso negado depois de mover o `ext4.vhdx`, ajuste o `BasePath` da distro em `HKCU\Software\Microsoft\Windows\CurrentVersion\Lxss\{guid}`.
+
 Os executáveis saem na pasta `Entrega` e em `<Entrega>\publicar\vX.Y.Z`, e são entregues por fora. **Commit e push não publicam nada:** nenhum workflow cria release. O `-Publicar`, que cria uma release no GitHub com o GitHub CLI logado, só roda se for pedido explicitamente, e hoje não é usado.
 
 ### Versões e nomes dos arquivos

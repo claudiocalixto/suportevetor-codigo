@@ -15,7 +15,14 @@ A janela do Cliente abria no meio da tela, ou onde tinha sido fechada, e cobria 
 
 ## 1.1.3 (número interno 18)
 
-Compilada em 24/11/2026 só para Windows de 64 bits: Console, Cliente (`.exe` e `.msi`) e portáteis. **Sem Android e sem o Cliente x86**, porque a máquina de compilação nova ainda não tem a distro WSL (`1_criar_wsl.ps1`) nem as ferramentas de 32 bits (`x86_ferramentas.ps1`). A versão do MSI é `1.1.3.<revisão>`, e a unit do MitryusWeb a considera igual à `1.1.3` do `versao.json`.
+Compilada em 24/11/2026, primeiro só para Windows de 64 bits: Console, Cliente (`.exe` e `.msi`) e portáteis. Faltavam a distro WSL (`1_criar_wsl.ps1`) e as ferramentas de 32 bits (`x86_ferramentas.ps1`) na máquina de compilação nova. A versão do MSI é `1.1.3.<revisão>`, e a unit do MitryusWeb a considera igual à `1.1.3` do `versao.json`.
+
+No mesmo dia, depois de montar os dois ambientes, a 1.1.3 foi **completada sem subir o número 18**:
+- os APKs arm64 e armv7, pelo `android/compilar_todos.sh`, com o número do Android em 79;
+- o Cliente x86 (`.exe` e portátil), pelo `x86_compilar.ps1`;
+- o `9_publicar.ps1 -SemCompilar`, que refez o `versao.json` com os arquivos novos.
+
+O código usado ainda era o da 1.1.3, sem a mudança da janela no canto, que é da 1.1.4.
 
 ### Cliente: `--vetor-liberar`, liberação sem abrir a janela
 
