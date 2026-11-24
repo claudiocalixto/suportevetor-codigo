@@ -8,6 +8,8 @@
 *.dart text eol=lf
 *.ts text eol=lf
 *.svg text eol=lf
+# Delphi 2007 le ANSI: no repositorio em UTF-8, no checkout em Windows-1252 (integracao/mitryusweb)
+*.pas text eol=crlf working-tree-encoding=CP1252
 # O patch da API e aplicado byte a byte pelo git apply
 *.patch -text
 *.png binary
