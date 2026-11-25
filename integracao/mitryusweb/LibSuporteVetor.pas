@@ -1,9 +1,9 @@
-unit uSuporteVetor;
+unit LibSuporteVetor;
 
 { ============================================================================
   Suporte remoto Vetor no MitryusWeb (Delphi 2007, sem componentes de terceiros)
 
-  Fluxo de SuporteVetorAbrir:
+  Fluxo de fSuporteVetorAbrir:
     1. Verifica se o Cliente (SuporteVetorSistemas) está instalado e em que versão.
     2. Baixa o versao.json de SV_URL_BASE e compara com a versão instalada.
     3. Se não estiver instalado, ou se houver versão nova: baixa o MSI, confere o
@@ -24,7 +24,7 @@ unit uSuporteVetor;
 
   Uso:
     var Id, Erro: string;
-    if SuporteVetorAbrir(Id, Erro) then
+    if fSuporteVetorAbrir(Id, Erro) then
       ShowMessage('Informe ao suporte o ID: ' + Id)
     else
       ShowMessage(Erro);
@@ -33,11 +33,11 @@ unit uSuporteVetor;
 interface
 
 uses
-  Windows, Messages, SysUtils, Classes, ShellAPI, UrlMon, WinInet, Forms;
+  Windows, Messages, SysUtils, Classes, ShellAPI, UrlMon, WinInet, Forms, MCLW901;
 
 const
   // Pasta do site onde ficam o versao.json e o MSI (termina com "/")
-  SV_URL_BASE      = 'https://www.mitryusweb.com.br/SUPORTE/';
+  SV_URL_BASE      = 'https://www.mitryusweb.com.br/MITRYUSWEB/SUPORTE/';
   SV_ARQ_VERSAO    = 'versao.json';
 
   // Nome interno do Cliente (marca Vetor). Não mude.
@@ -55,7 +55,7 @@ type
   // Opcional: recebe mensagens de andamento para mostrar ao usuário (ex.: num TLabel)
   TSuporteVetorEtapa = procedure(const AMensagem: string) of object;
 
-function SuporteVetorAbrir(out AId: string; out AErro: string;
+function fSuporteVetorAbrir(out AId: string; out AErro: string;
   AEtapa: TSuporteVetorEtapa = nil): Boolean;
 
 // Funções avulsas, se quiser montar o fluxo de outro jeito
@@ -485,7 +485,7 @@ end;
 
 { --- Fluxo completo --------------------------------------------------------- }
 
-function SuporteVetorAbrir(out AId: string; out AErro: string;
+function fSuporteVetorAbrir(out AId: string; out AErro: string;
   AEtapa: TSuporteVetorEtapa = nil): Boolean;
 
   procedure Etapa(const S: string);

@@ -1,5 +1,20 @@
 # Mudanças
 
+## 1.1.5 (número interno 20)
+
+Compilada em 25/11/2026, **só o Cliente x64** (`.exe`, portátil e `.msi`) e um `versao.json` só com a chave do MSI, para o site do MitryusWeb. Sem Console, x86, APKs e `versao.assinado`.
+
+### Cliente: uma janela só, mesmo chamado várias vezes
+
+- **Problema:** cada vez que o Cliente era aberto sem parâmetros (atalho, ou o ERP chamando o `.exe`), abria **mais um processo e mais uma janela**. Numa máquina de teste, três pedidos de suporte deixaram três janelas iguais na tela.
+- **Causa:** o runner do Windows (`flutter/windows/runner/main.cpp`) procura a instância aberta pelo título da janela igual ao nome interno (`SuporteVetorSistemas`). O Dart troca esse título pelo nome exibido (`Suporte Vetor Sistemas`), então a busca nunca achava a janela.
+- **Correção (`2_marca.ps1`):** o `src/flutter.rs` exporta `cadena_nome_exibido_c`, e o `main.cpp` procura também pelo nome exibido. Achando, só mostra e traz para a frente a janela que já existe, como no RustDesk original. Só a janela principal tem exatamente esse título; a de aprovação é `<id> - <nome>`.
+
+### Integração com o MitryusWeb: unit renomeada para `LibSuporteVetor.pas`
+
+- `integracao/mitryusweb/uSuporteVetor.pas` virou **`LibSuporteVetor.pas`**, com os ajustes do projeto do MitryusWeb: função `fSuporteVetorAbrir`, `MCLW901` no `uses` e o site em `https://www.mitryusweb.com.br/MITRYUSWEB/SUPORTE/`. É a versão que vale daqui em diante.
+- Ela libera o acesso com `--vetor-liberar`, sem abrir a janela do Cliente. A cópia que estava em uso no ERP ainda abria a janela a cada chamada.
+
 ## 1.1.4 (número interno 19)
 
 Compilada em 24/11/2026, completa, pelo `0_nova_versao.ps1 -Versao 1.1.4`, sem `-Publicar`:

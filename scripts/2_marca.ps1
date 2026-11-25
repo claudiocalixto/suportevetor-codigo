@@ -291,6 +291,43 @@ Trocar "$Fonte\flutter\windows\runner\Runner.rc" @{
   'VALUE "LegalCopyright", "[^"]*"' = "VALUE `"LegalCopyright`", `"$Direitos`""
   'VALUE "ProductName", "RustDesk"' = "VALUE `"ProductName`", `"$NomeExibido`""
 }
+# Instancia unica no Windows: o runner procura a janela principal aberta pelo titulo = nome interno
+# (SuporteVetorSistemas), mas o Dart troca o titulo para o nome exibido (Suporte Vetor Sistemas). Sem achar,
+# cada chamada sem parametros (atalho, ERP) abria um processo e uma janela a mais. Procura tambem pelo nome
+# exibido. So a janela principal tem exatamente esse titulo (a de aprovacao e "<id> - <nome>").
+Trocar "$Fonte\src\flutter.rs" @{
+  '#\[cfg\(windows\)\]\r?\n#\[no_mangle\]\r?\npub unsafe extern "C" fn get_rustdesk_app_name\(' = @'
+// CadenaTech: titulo da janela principal (nome exibido), para o runner achar a instancia aberta
+#[cfg(windows)]
+#[no_mangle]
+pub unsafe extern "C" fn cadena_nome_exibido_c(buffer: *mut u16, length: i32) -> i32 {
+    let name = crate::platform::wide_string(&crate::common::cadena_nome_exibido());
+    if length > name.len() as i32 {
+        std::ptr::copy_nonoverlapping(name.as_ptr(), buffer, name.len());
+        return 0;
+    }
+    -1
+}
+
+#[cfg(windows)]
+#[no_mangle]
+pub unsafe extern "C" fn get_rustdesk_app_name(
+'@ -replace "`r`n", "`n"
+}
+Trocar "$Fonte\flutter\windows\runner\main.cpp" @{
+  '  HWND hwnd = ::FindWindowW\(getWindowClassName\(\), app_name\.c_str\(\)\);' = @'
+  HWND hwnd = ::FindWindowW(getWindowClassName(), app_name.c_str());
+  // CadenaTech: a janela principal tem o nome exibido como titulo (o Dart o troca depois de abrir)
+  if (hwnd == NULL) {
+    FUNC_RUSTDESK_GET_APP_NAME cadena_nome_exibido_c =
+        (FUNC_RUSTDESK_GET_APP_NAME)GetProcAddress(hInstance, "cadena_nome_exibido_c");
+    wchar_t cadena_titulo[512] = {0};
+    if (cadena_nome_exibido_c && cadena_nome_exibido_c(cadena_titulo, 512) == 0) {
+      hwnd = ::FindWindowW(getWindowClassName(), cadena_titulo);
+    }
+  }
+'@ -replace "`r`n", "`n" -replace "`n$", ''
+}
 $CorPrincipal = Hex $Marca.CorPrincipal
 Trocar "$Fonte\flutter\lib\common.dart" @{
   'static const Color accent = Color\(0xFF0071FF\)' = "static const Color accent = Color(0xFF$CorPrincipal)"

@@ -1,19 +1,19 @@
 # Integração com o MitryusWeb (Delphi 2007)
 
-A unit [`uSuporteVetor.pas`](uSuporteVetor.pas) é o botão "Suporte remoto" do MitryusWeb: instala ou atualiza o Cliente, lê o ID do computador e libera o acesso ao suporte, tudo sem cobrir a tela do ERP. Não usa componentes de terceiros, só a API do Windows: `msi.dll`, CryptoAPI, `urlmon` e `ShellExecuteEx`.
+A unit [`LibSuporteVetor.pas`](LibSuporteVetor.pas) é o botão "Suporte remoto" do MitryusWeb: instala ou atualiza o Cliente, lê o ID do computador e libera o acesso ao suporte, tudo sem cobrir a tela do ERP. Não usa componentes de terceiros, só a API do Windows: `msi.dll`, CryptoAPI, `urlmon` e `ShellExecuteEx`.
 
 > **Codificação:** no repositório o arquivo fica em UTF-8. O `.gitattributes` (`working-tree-encoding=CP1252`) faz o checkout em **ANSI (Windows-1252)**, que é o que o Delphi 2007 lê. Copie o arquivo do checkout, e não do navegador do GitHub, senão os acentos das mensagens saem errados.
 
 ## Uso
 
 ```pascal
-uses uSuporteVetor;
+uses LibSuporteVetor;
 
 procedure TFrmPrincipal.BtnSuporteClick(Sender: TObject);
 var
   Id, Erro: string;
 begin
-  if SuporteVetorAbrir(Id, Erro) then
+  if fSuporteVetorAbrir(Id, Erro) then
     ShowMessage('Informe ao suporte o ID deste computador: ' + Id)
   else
     ShowMessage(Erro);
@@ -22,7 +22,7 @@ end;
 
 O terceiro parâmetro (opcional) recebe as mensagens de andamento ("Baixando…", "Instalando…") para mostrar num `TLabel`, por exemplo.
 
-## O que o `SuporteVetorAbrir` faz
+## O que o `fSuporteVetorAbrir` faz
 
 | Passo | Como |
 |---|---|
@@ -37,7 +37,7 @@ Sem acesso ao site, mas com o Cliente instalado, a unit segue com a versão que 
 
 ## O que vai no site
 
-Em `SV_URL_BASE` (hoje `https://www.mitryusweb.com.br/SUPORTE/`), a cada versão nova, suba **os dois** arquivos de `<Entrega>\publicar\vX.Y.Z\`:
+Em `SV_URL_BASE` (hoje `https://www.mitryusweb.com.br/MITRYUSWEB/SUPORTE/`), a cada versão nova, suba **os dois** arquivos de `<Entrega>\publicar\vX.Y.Z\`:
 
 - `suporte-vX.Y.Z-client-x64.msi`;
 - `versao.json`, **sempre com esse nome**. É ele que diz qual é a versão atual e o SHA-256 do MSI.
