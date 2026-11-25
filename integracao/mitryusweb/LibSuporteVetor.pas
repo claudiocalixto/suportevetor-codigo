@@ -240,6 +240,19 @@ begin
   end;
 end;
 
+// Janela dona do pedido de administrador (UAC). Tem que ser uma janela visível e em primeiro plano:
+// com o Application.Handle (janela invisível do Delphi 2007), o Windows 11 deixa o pedido minimizado,
+// piscando na barra de tarefas, e o usuário não o vê.
+function JanelaDona: HWND;
+begin
+  if (Screen.ActiveForm <> nil) and Screen.ActiveForm.Visible then
+    Result := Screen.ActiveForm.Handle
+  else if (Application.MainForm <> nil) and Application.MainForm.Visible then
+    Result := Application.MainForm.Handle
+  else
+    Result := Application.Handle;
+end;
+
 // Roda um programa como administrador (pedido do UAC) e espera terminar, sem travar a tela
 function ExecutarElevado(const AArquivo, AParametros: string; out ACodigo: DWORD): Boolean;
 var
@@ -249,7 +262,9 @@ begin
   FillChar(SEI, SizeOf(SEI), 0);
   SEI.cbSize := SizeOf(SEI);
   SEI.fMask := SEE_MASK_NOCLOSEPROCESS;
-  SEI.Wnd := Application.Handle;
+  SEI.Wnd := JanelaDona;
+  // Traz a tela do ERP para a frente: o pedido do UAC abre na frente da janela dona
+  SetForegroundWindow(SEI.Wnd);
   SEI.lpVerb := 'runas';
   SEI.lpFile := PChar(AArquivo);
   SEI.lpParameters := PChar(AParametros);

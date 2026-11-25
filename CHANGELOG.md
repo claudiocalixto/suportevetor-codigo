@@ -14,6 +14,11 @@ Compilada em 25/11/2026, **só o Cliente x64** (`.exe`, portátil e `.msi`) e um
 
 - `integracao/mitryusweb/uSuporteVetor.pas` virou **`LibSuporteVetor.pas`**, com os ajustes do projeto do MitryusWeb: função `fSuporteVetorAbrir`, `MCLW901` no `uses` e o site em `https://www.mitryusweb.com.br/MITRYUSWEB/SUPORTE/`. É a versão que vale daqui em diante.
 - Ela libera o acesso com `--vetor-liberar`, sem abrir a janela do Cliente. A cópia que estava em uso no ERP ainda abria a janela a cada chamada.
+- **Pedido de administrador na frente da tela (25/11/2026):**
+  - **Problema:** no Windows 11, ao instalar o Cliente pelo ERP, o pedido do UAC ("Deseja permitir que este aplicativo faça alterações…", do Windows Installer) ficava minimizado, piscando na barra de tarefas. Se o usuário não visse, a instalação ficava parada.
+  - **Causa:** o `ExecutarElevado` passava `Application.Handle` como janela dona do `ShellExecuteEx`. No Delphi 2007, essa é uma janela invisível do `TApplication`. Sem uma dona visível em primeiro plano, o Windows não mostra o UAC na frente.
+  - **Correção:** a função nova `JanelaDona` devolve o formulário ativo, ou o principal, ou só então o `Application.Handle`, e o `ExecutarElevado` traz essa janela para a frente (`SetForegroundWindow`) antes de pedir. Vale também para a remoção do Cliente antigo instalado pelo `.exe`.
+  - Se o usuário trocar de programa durante o download, o Windows ainda pode mandar o pedido para a barra de tarefas. É uma proteção do próprio Windows.
 
 ## 1.1.4 (número interno 19)
 
