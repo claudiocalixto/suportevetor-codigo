@@ -61,6 +61,7 @@ scripts/                compilacao do app (Windows e Android)
   android/              compilacao do Android num WSL (Ubuntu) dedicado
 api/                    API e painel: cadena-api.patch, pt-br.ts, atualizar_api.ps1, exemplos de configuracao
 integracao/mitryusweb/  botao "Suporte remoto" do MitryusWeb (Delphi 2007): instala/atualiza pelo MSI, le o ID e libera
+integracao/mitryusfly/  roteiro para o agente do Mitryus Fly (Flutter) fazer o mesmo fluxo em Dart e mandar o ID ao chat
 config.exemplo.psd1     modelo da configuracao local (copie para config.local.psd1)
 ```
 

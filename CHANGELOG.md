@@ -22,6 +22,13 @@ O MSI e o Console foram compilados separadamente (perfil por perfil, sem o `8_co
 - **Correção (`2_marca.ps1`, troca no `remote_page.dart`):** na janela principal (`kWindowId` nulo, só no Windows), a `RemotePage` registra também um `WindowListener` do `window_manager` (`_CadenaEventosJanelaPrincipal`), que repassa `onWindowBlur`, `onWindowFocus`, `onWindowMinimize` e `onWindowRestore`. Ao sair da janela, o Console solta o teclado. Ao voltar, ele só o pega de novo se o mouse estiver sobre a tela do cliente e a aba for a selecionada.
 - Testado em 25/11/2026 com o Console portátil: o teclado funciona nos outros programas com o atendimento aberto numa aba.
 
+### Integração com o Mitryus Fly: roteiro para o agente do `mitryus_app`
+
+- Novo [`integracao/mitryusfly/README.md`](integracao/mitryusfly/README.md): o que o Fly deve implementar para usar o Suporte Vetor no Windows, com o mesmo fluxo do `fSuporteVetorAbrir` (verifica, baixa e instala ou atualiza pelo MSI, lê o ID com `--get-id` e libera com `--vetor-liberar`) e uma implementação de referência em Dart (`SuporteVetorService`). O código não foi compilado: é ponto de partida para o agente do Fly.
+- **O chat não muda.** O fluxo roda ao chamar o suporte (`Usuario.chamarSuporteOnline`, depois do `DialogDadosSuporte`), e o ID vai para o chat do PipeFly pelo parâmetro `id_acesso_remoto`, que o portal já aceita.
+- **A URL do chat fica como o Fly gera hoje** (`Usuario._montarUrlSuporte`: mesmos parâmetros, ordem e formato). A única mudança é `id_acesso_remoto` no fim, só quando houver ID. O formato dos outros parâmetros do MitryusWeb não deve ser copiado, porque o `terminal` é o que separa os chamados de cada computador.
+- Se o Suporte Vetor falhar, o chat abre do mesmo jeito, sem o ID. O LogMeIn das Configurações continua.
+
 ### Integração com o MitryusWeb: unit renomeada para `LibSuporteVetor.pas`
 
 - `integracao/mitryusweb/uSuporteVetor.pas` virou **`LibSuporteVetor.pas`**, com os ajustes do projeto do MitryusWeb: função `fSuporteVetorAbrir`, `MCLW901` no `uses` e o site em `https://www.mitryusweb.com.br/MITRYUSWEB/SUPORTE/`. É a versão que vale daqui em diante.
