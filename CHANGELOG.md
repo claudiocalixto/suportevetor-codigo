@@ -2,7 +2,12 @@
 
 ## 1.1.5 (número interno 20)
 
-Compilada em 25/11/2026, **só o Cliente x64** (`.exe`, portátil e `.msi`) e um `versao.json` só com a chave do MSI, para o site do MitryusWeb. Sem x86, APKs e `versao.assinado`. No mesmo dia saiu um Console x64 portátil de teste, com a correção do teclado abaixo.
+Compilada em 25/11/2026, **só para Windows de 64 bits**, sem x86 e sem APKs. A release entregue (`publicar1.1.5`) leva:
+- `suporte-v1.1.5-client-x64.msi`, para o site do MitryusWeb (`/MITRYUSWEB/SUPORTE/`);
+- `suporte-v1.1.5-console-x64.exe`, o instalador do Console Técnico, com a correção do teclado abaixo;
+- `versao.json`, com as chaves `suportevetorsistemas-msi` e `consoletecnicovetorsistemas` (arquivo e SHA-256), e o `versao.assinado`.
+
+O MSI e o Console foram compilados separadamente (perfil por perfil, sem o `8_compilar_perfis.ps1`), e a pasta foi montada sem o `9_publicar.ps1`, que levaria também o `.exe` e os portáteis do Cliente e os APKs da 1.1.4. Os dois arquivos são os mesmos que foram testados: MSI `0ee6e0e0…`, Console `a8e45fb1…`.
 
 ### Cliente: uma janela só, mesmo chamado várias vezes
 
