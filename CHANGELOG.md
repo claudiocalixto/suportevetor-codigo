@@ -2,7 +2,7 @@
 
 ## 1.1.5 (número interno 20)
 
-Compilada em 25/11/2026, **só para Windows de 64 bits**, sem x86 e sem APKs. A release entregue (`publicar1.1.5`) leva:
+Compilada em 25/11/2026, **só para Windows de 64 bits**, sem x86 e sem APKs. A release entregue (`publicar\v1.1.5`) leva:
 - `suporte-v1.1.5-client-x64.msi`, para o site do MitryusWeb (`/MITRYUSWEB/SUPORTE/`);
 - `suporte-v1.1.5-console-x64.exe`, o instalador do Console Técnico, com a correção do teclado abaixo;
 - `versao.json`, com as chaves `suportevetorsistemas-msi` e `consoletecnicovetorsistemas` (arquivo e SHA-256), e o `versao.assinado`.
