@@ -328,6 +328,61 @@ Trocar "$Fonte\flutter\windows\runner\main.cpp" @{
   }
 '@ -replace "`r`n", "`n" -replace "`n$", ''
 }
+# Console: o acesso numa aba da janela principal nao recebia o "perdeu o foco" da janela. A RemotePage so escuta o
+# DesktopMultiWindow, que manda os eventos das janelas separadas; a principal e do window_manager. Sem o blur, o
+# gancho de teclado (keyboard.rs, start_grab_loop) ficava ligado e o teclado do tecnico morria nos outros programas
+# ate trocar de aba. Na janela principal (kWindowId nulo), repassa blur/focus/minimize/restore do window_manager.
+Trocar "$Fonte\flutter\lib\desktop\pages\remote_page.dart" @{
+  "import 'package:desktop_multi_window/desktop_multi_window.dart';" = @'
+import 'package:desktop_multi_window/desktop_multi_window.dart';
+import 'package:window_manager/window_manager.dart' as cadena_wm;
+import 'package:flutter_hbb/main.dart' show kWindowId;
+'@ -replace "`r`n", "`n"
+  '  Timer\? _timer;' = @'
+  Timer? _timer;
+  // CadenaTech: eventos da janela principal, quando o acesso esta numa aba do Console
+  _CadenaEventosJanelaPrincipal? _cadenaJanela;
+'@ -replace "`r`n", "`n" -replace "`n$", ''
+  '    DesktopMultiWindow\.addListener\(this\);' = @'
+    DesktopMultiWindow.addListener(this);
+    if (isWindows && kWindowId == null) {
+      _cadenaJanela = _CadenaEventosJanelaPrincipal(this);
+      cadena_wm.windowManager.addListener(_cadenaJanela!);
+    }
+'@ -replace "`r`n", "`n" -replace "`n$", ''
+  '    DesktopMultiWindow\.removeListener\(this\);' = @'
+    DesktopMultiWindow.removeListener(this);
+    if (_cadenaJanela != null) {
+      cadena_wm.windowManager.removeListener(_cadenaJanela!);
+      _cadenaJanela = null;
+    }
+'@ -replace "`r`n", "`n" -replace "`n$", ''
+  'class _RemotePageState extends State<RemotePage>' = @'
+// CadenaTech: repassa os eventos da janela principal (window_manager) para a RemotePage numa aba do Console
+class _CadenaEventosJanelaPrincipal extends cadena_wm.WindowListener {
+  final _RemotePageState pagina;
+  _CadenaEventosJanelaPrincipal(this.pagina);
+  @override
+  void onWindowBlur() {
+    if (pagina.mounted) pagina.onWindowBlur();
+  }
+  @override
+  void onWindowFocus() {
+    if (pagina.mounted) pagina.onWindowFocus();
+  }
+  @override
+  void onWindowMinimize() {
+    if (pagina.mounted) pagina.onWindowMinimize();
+  }
+  @override
+  void onWindowRestore() {
+    if (pagina.mounted) pagina.onWindowRestore();
+  }
+}
+
+class _RemotePageState extends State<RemotePage>
+'@ -replace "`r`n", "`n"
+}
 $CorPrincipal = Hex $Marca.CorPrincipal
 Trocar "$Fonte\flutter\lib\common.dart" @{
   'static const Color accent = Color\(0xFF0071FF\)' = "static const Color accent = Color(0xFF$CorPrincipal)"

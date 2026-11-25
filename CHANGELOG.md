@@ -2,13 +2,20 @@
 
 ## 1.1.5 (número interno 20)
 
-Compilada em 25/11/2026, **só o Cliente x64** (`.exe`, portátil e `.msi`) e um `versao.json` só com a chave do MSI, para o site do MitryusWeb. Sem Console, x86, APKs e `versao.assinado`.
+Compilada em 25/11/2026, **só o Cliente x64** (`.exe`, portátil e `.msi`) e um `versao.json` só com a chave do MSI, para o site do MitryusWeb. Sem x86, APKs e `versao.assinado`. No mesmo dia saiu um Console x64 portátil de teste, com a correção do teclado abaixo.
 
 ### Cliente: uma janela só, mesmo chamado várias vezes
 
 - **Problema:** cada vez que o Cliente era aberto sem parâmetros (atalho, ou o ERP chamando o `.exe`), abria **mais um processo e mais uma janela**. Numa máquina de teste, três pedidos de suporte deixaram três janelas iguais na tela.
 - **Causa:** o runner do Windows (`flutter/windows/runner/main.cpp`) procura a instância aberta pelo título da janela igual ao nome interno (`SuporteVetorSistemas`). O Dart troca esse título pelo nome exibido (`Suporte Vetor Sistemas`), então a busca nunca achava a janela.
 - **Correção (`2_marca.ps1`):** o `src/flutter.rs` exporta `cadena_nome_exibido_c`, e o `main.cpp` procura também pelo nome exibido. Achando, só mostra e traz para a frente a janela que já existe, como no RustDesk original. Só a janela principal tem exatamente esse título; a de aprovação é `<id> - <nome>`.
+
+### Console: o teclado não fica mais preso no atendimento
+
+- **Problema:** com o atendimento numa aba do Console, depois de conectar, o teclado do técnico só funcionava no Console. Os outros programas não recebiam nenhuma tecla até clicar em "Início" e voltar para a aba do atendimento. Na janela separada, isso não acontecia.
+- **Causa:** durante o atendimento, o Console liga um gancho de teclado do Windows (`start_grab_loop`, em `src/keyboard.rs`) que segura as teclas para mandá-las ao cliente. Ele só é desligado quando a tela do atendimento perde o foco. A `RemotePage` fica sabendo disso pelo `DesktopMultiWindow`, que só manda os eventos das janelas separadas. A janela principal é do `window_manager`, então a aba do Console nunca recebia o `onWindowBlur`, e o gancho continuava ligado.
+- **Correção (`2_marca.ps1`, troca no `remote_page.dart`):** na janela principal (`kWindowId` nulo, só no Windows), a `RemotePage` registra também um `WindowListener` do `window_manager` (`_CadenaEventosJanelaPrincipal`), que repassa `onWindowBlur`, `onWindowFocus`, `onWindowMinimize` e `onWindowRestore`. Ao sair da janela, o Console solta o teclado. Ao voltar, ele só o pega de novo se o mouse estiver sobre a tela do cliente e a aba for a selecionada.
+- Testado em 25/11/2026 com o Console portátil: o teclado funciona nos outros programas com o atendimento aberto numa aba.
 
 ### Integração com o MitryusWeb: unit renomeada para `LibSuporteVetor.pas`
 
